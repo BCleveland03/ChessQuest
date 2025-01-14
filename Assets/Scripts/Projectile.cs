@@ -19,7 +19,7 @@ namespace TopDownGame
 
         // State Tracking
         public bool belongsToPlayer;
-        
+
         // Methods
         void Start()
         {
@@ -28,6 +28,17 @@ namespace TopDownGame
             sprite.transform.rotation = Quaternion.Euler(0, 0, 0);
         }
 
+        void Update()
+        {
+            // Checks if the distance from the player exceeds the distance between the target's position from the player (with some extra room)
+            if (Vector2.Distance(transform.position, PlayerController.instance.transform.position) 
+                > Vector2.Distance(PlayerController.instance.projectileTargetTile.transform.position, PlayerController.instance.transform.position) * 1.4f)
+            {
+                Destroy(gameObject);
+            }
+        }
+
+        // Destroys when it comes into contact with something
         void OnCollisionEnter2D(Collision2D other)
         {
             if (other.collider.gameObject.layer == LayerMask.NameToLayer("Enemy"))
@@ -35,7 +46,7 @@ namespace TopDownGame
                 Collider2D hit = Physics2D.OverlapCircle(transform.position, 0.75f, enemyMask);
                 
                 EnemyMasterController enemy = hit.GetComponent<EnemyMasterController>();
-                enemy.EnemyTakeDamage();
+                enemy.EnemyTakeDamage("main");
             }
 
             Destroy(gameObject);

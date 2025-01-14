@@ -954,6 +954,7 @@ namespace TopDownGame {
 
             GameController.instance.UpdatePlayerStats();
 
+            // Perform the movement
             while (timeElapsed < moveDuration)
             {
                 // Move player to desired destination over a fixed period of time
@@ -965,9 +966,40 @@ namespace TopDownGame {
 
             transform.position = targetedPos;
 
+            CheckLanding();
+
             movementCoroutineIsActive = false;
             spawnSelectableTiles();
             NodeController.instance.ReinstantiateNodePoints();
+        }
+
+        public void CheckLanding()
+        {
+            RaycastHit2D hitDetect;
+            Collider2D[] hits;
+            Vector2 noDirNecessary = transform.TransformDirection(new Vector2(0, 0));
+
+            hitDetect = Physics2D.Raycast(transform.position, noDirNecessary, 0, wallMask);
+            Debug.DrawRay(transform.position, noDirNecessary, Color.yellow, 0.5f);
+
+            // If no wall is detected in this spot, then check that spot again specifically for enemies using its coordinates
+            if (hitDetect.collider == null)
+            {
+                // Enemy check
+                hits = Physics2D.OverlapCircleAll(transform.position, 0.9f, enemyMask);
+
+                // Handle each hit target in that spot, should there be more than one
+                foreach (Collider2D hit in hits)
+                {
+                    EnemyMasterController enemy = hit.GetComponent<EnemyMasterController>();
+
+                    if (enemy)
+                    {
+                        print("Landed on enemy");
+                        enemy.EnemyTakeDamage("landing");
+                    }
+                }
+            }
         }
 
         IEnumerator PerformAttack()
@@ -1024,7 +1056,7 @@ namespace TopDownGame {
 
                             if (enemy)
                             {
-                                enemy.EnemyTakeDamage();
+                                enemy.EnemyTakeDamage("main");
                             }
                         }
                     }
@@ -1065,7 +1097,7 @@ namespace TopDownGame {
 
                         if (enemy)
                         {
-                            enemy.EnemyTakeDamage();
+                            enemy.EnemyTakeDamage("main");
                         }
                     }
 
@@ -1088,7 +1120,7 @@ namespace TopDownGame {
 
                             if (enemy)
                             {
-                                enemy.EnemyTakeDamage();
+                                enemy.EnemyTakeDamage("main");
                             }
                         }
                     }

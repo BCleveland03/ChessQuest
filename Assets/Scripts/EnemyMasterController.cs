@@ -37,7 +37,7 @@ namespace TopDownGame
         public bool playerDetectionRadius;
         public Vector3 hypotenuseOfEnemyToPlayer;
         public bool detectsPlayer = false;
-        public bool seesPlayer = false;
+        public bool canTrackPlayer = false;
         public Node previousNode;
         public Node currentNode;
         //private GameObject[] allObjects;
@@ -88,7 +88,13 @@ namespace TopDownGame
 
         private void Update()
         {
-            // Occurs once every specified interval
+            // Reset path
+            if (path != null)
+            {
+                path.Clear();
+            }
+
+            // Action occurs once every specified interval
             if (GameController.instance.globalTimer - previousWaitCounter == individualActionInterval)
             {
                 // Sets the counter to the current time so it can wait again
@@ -119,52 +125,65 @@ namespace TopDownGame
 
                         if (hit.collider.gameObject.layer == LayerMask.NameToLayer("Player"))
                         {
-                            seesPlayer = true;
+                            // Active node update
+                            GameObject[] allObjects = GameObject.FindGameObjectsWithTag("NodePoint");
+                            foreach (GameObject obj in allObjects)
+                            {
+                                Node n = obj.GetComponent<Node>();
+                                if (Mathf.Round(transform.position.x) == n.transform.position.x && Mathf.Round(transform.position.y) == n.transform.position.y)
+                                {
+                                    currentNode = n;
+                                    break;
+                                }
+                            }
+
+                            // Generate path to check for possible reach
+                            path = AStarManager.instance.GeneratePath(currentNode, AStarManager.instance.FindNearestNode(playerPos));
+                            //targetPos = path[1].transform.position;
+
+                            if (path != null)
+                            {
+                                canTrackPlayer = true;
+                            }
+                            else
+                            {
+                                //path.Clear();
+                                canTrackPlayer = false;
+                            }
+
                             break;
                         }
                         else if (hit.collider.gameObject.layer == LayerMask.NameToLayer("Wall"))
                         {
-                            seesPlayer = false;
+                            canTrackPlayer = false;
                             break;
                         }
                     }
                 }
                 else
                 {
-                    seesPlayer = false;
+                    canTrackPlayer = false;
                 }
 
 
-
-                // Active node update
-                GameObject[] allObjects = GameObject.FindGameObjectsWithTag("NodePoint");
-                foreach (GameObject obj in allObjects)
-                {
-                    Node n = obj.GetComponent<Node>();
-                    if (Mathf.Round(transform.position.x) == n.transform.position.x && Mathf.Round(transform.position.y) == n.transform.position.y)
-                    {
-                        currentNode = n;
-                        break;
-                    }
-                }
 
                 // Update state
-                if (!seesPlayer && currentState != StateMachine.Patrol && currentHealth > (currentHealthMax * 10) / 100)
+                if (!canTrackPlayer && currentState != StateMachine.Patrol && currentHealth > (currentHealthMax * 10) / 100)
                 {
                     currentState = StateMachine.Patrol;
-                    path.Clear();
+                    //path.Clear();
                     print("Patrolling");
                 }
-                else if (seesPlayer && currentState != StateMachine.Engage && currentHealth > (currentHealthMax * 10) / 100)
+                else if (canTrackPlayer && currentState != StateMachine.Engage && currentHealth > (currentHealthMax * 10) / 100)
                 {
                     currentState = StateMachine.Engage;
-                    path.Clear();
+                    //path.Clear();
                     print("Engaged");
                 }
                 else if (currentState != StateMachine.Evade && currentHealth <= (currentHealthMax * 10) / 100)
                 {
                     currentState = StateMachine.Evade;
-                    path.Clear();
+                    //path.Clear();
                     print("Running");
                 }
 
@@ -183,9 +202,19 @@ namespace TopDownGame
             }
         }
 
-        public void EnemyTakeDamage()
+        public void EnemyTakeDamage(string TypeOfAttack)
         {
-            currentHealth -= PlayerController.instance.damageOutput[PlayerController.instance.selectedCharacter];
+            if (TypeOfAttack == "main")
+            {
+                currentHealth -= PlayerController.instance.damageOutput[PlayerController.instance.selectedCharacter];
+            }
+            else if (TypeOfAttack == "landing")
+            {
+                currentHealth -= PlayerController.instance.damageOutput[3];
+
+                // IMPLEMENT PUSH BACK WHEN LANDING; IF ENEMY CANT BE LANDED ON, CALL FUNCTION IN PLAYER SCRIPT THAT PUSHES THEM BACK A TILE
+            }
+
             healthDisplay.transform.localScale = new Vector3((float)currentHealth / currentHealthMax, 1, 1);
             StartCoroutine(DamageFlash());
 
@@ -244,8 +273,12 @@ namespace TopDownGame
 
         void Engage()
         {
-            path.Clear();
+            /*path.Clear();
             path = AStarManager.instance.GeneratePath(currentNode, AStarManager.instance.FindNearestNode(playerPos));
+            /*if (path.Count == 0)
+            {
+                
+            }
 
             /*for (int i = 1; i < path.Count; i++)
             {
@@ -253,8 +286,9 @@ namespace TopDownGame
             }*/
 
             targetPos = path[1].transform.position;
-            if(targetPos == playerPos)
-            {
+
+            if (targetPos == playerPos)
+            {                
                 if (PlayerController.instance.selectedCharacter == 0 && PlayerController.instance.rookShielded)
                 {
                     hypotenuseOfEnemyToPlayer = playerPos - transform.position;
