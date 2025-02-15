@@ -7,13 +7,14 @@ namespace TopDownGame
     public class EnemyMasterController : MonoBehaviour
     {
         // Outlets
-        public Vector3 playerPos;
+        public Vector2 playerPos;
         //public CircleCollider2D detectionComponent;
         public GameObject healthDisplay;
         public GameObject healthDisplayBG;
         public Transform[] actionZones;
-
         SpriteRenderer sprite;
+        CircleCollider2D circCollider;
+        Animator animator;
 
         // State Tracking
         [Header ("Preconfiguration")]
@@ -23,26 +24,48 @@ namespace TopDownGame
         public int enemyDamage;
         public float individualActionInterval;
         public float enemyDetectionRadius;
-        public bool canEnemyEvade;
         private bool evadableState;
+        public float travelDirection;
+        public bool withinRangeToPerformAction = false;
 
         [Header ("Enemy Functionality")]
         public float previousWaitCounter = -1;
         //private bool actionPerformed = false;
         //private bool withinRangeOfPlayer = false;
 
-        [Header("Enemy AI")]
-        public List<Vector2> allDirections = new List<Vector2>();
+        [Header("Enemy AI/Behavior")]
+        public List<Vector2> allSlimeDirections = new List<Vector2>();
+        public List<Vector2> allBatDirections = new List<Vector2>();
         public List<Vector2> availableDirections = new List<Vector2>();
         public bool playerDetectionRadius;
-        public Vector3 hypotenuseOfEnemyToPlayer;
+        private Vector3 hypotenuseOfEnemyToPlayer;
+        private float angleTowardPlayer;
         public bool detectsPlayer = false;
         public bool canTrackPlayer = false;
+
+        public enum EnemyType
+        {
+            Slime,
+            Bat
+        }
+        public EnemyType selectedEnemy;
+
+        //public bool canMove = true;
+        public bool collidesWithGaps;
+        public bool canBeLandedOn;
+        public bool isFlyingLayer;
+        private int flyingInt;
+        public bool protectionFromLandedOn;
+        public bool canEnemyEvade;
+        public float patrolMoveSpeed;
+        public float engagedMoveSpeed;
+
+        [Header("Node Info")]
         public Node previousNode;
         public Node currentNode;
         //private GameObject[] allObjects;
         public List<Node> path/* = new List<Node>()*/;
-        public Vector3 targetPos;
+        public Vector2 targetPos;
 
         public enum StateMachine
         {
@@ -57,6 +80,7 @@ namespace TopDownGame
         public LayerMask combinedPlayerAndObstacleMask;
         public LayerMask combinedPlayerAndWallMask;
         public LayerMask obstacleMask;
+        public LayerMask wallMask;
         public LayerMask playerAndShieldMask;
         //public LayerMask playerMask;
         //public LayerMask wallMask;
@@ -66,8 +90,12 @@ namespace TopDownGame
         private void Start()
         {
             sprite = GetComponent<SpriteRenderer>();
+            circCollider = GetComponent<CircleCollider2D>();
+            animator = GetComponent<Animator>();
 
             currentHealth = currentHealthMax;
+            animator.SetInteger("Health", currentHealth);
+            animator.SetFloat("DirectionAngle", 180);
 
             currentState = StateMachine.Patrol;
             StartCoroutine(InitiateEnemy(individualActionInterval));
@@ -95,111 +123,137 @@ namespace TopDownGame
             }
 
             // Action occurs once every specified interval
-            if (GameController.instance.globalTimer - previousWaitCounter == individualActionInterval)
-            {
+            if (GameController.instance.globalTimer - previousWaitCounter >= individualActionInterval && currentHealth > 0)
+            {                
                 // Sets the counter to the current time so it can wait again
                 previousWaitCounter = GameController.instance.globalTimer;
 
                 // Finds the player position for future reference
                 playerPos = new Vector2(PlayerController.instance.targetedPos.x, PlayerController.instance.targetedPos.y);
 
-                // Player detection for engage state
-                if (Vector2.Distance(transform.position, playerPos) < enemyDetectionRadius * 2 + 1 - 0.1f)
+                // Determines if any actions should be performed
+                if (Vector2.Distance(transform.position, playerPos) < 20f)
                 {
-                    hypotenuseOfEnemyToPlayer = playerPos - transform.position;
+                    withinRangeToPerformAction = true;
 
-                    float radiansTowardPlayer = Mathf.Atan2(hypotenuseOfEnemyToPlayer.y, hypotenuseOfEnemyToPlayer.x);
-                    float angleTowardPlayer = radiansTowardPlayer * Mathf.Rad2Deg;
-
-                    // Detect for walls
-                    RaycastHit2D[] hits = Physics2D.RaycastAll(transform.position, hypotenuseOfEnemyToPlayer, enemyDetectionRadius * 2 + 1, combinedPlayerAndWallMask);
-                    Debug.DrawRay(transform.position, hypotenuseOfEnemyToPlayer, Color.red, 0.5f);
-
-                    for (int i = 0; i < hits.Length; i++)
+                    // Player detection for engage state
+                    if (Vector2.Distance(transform.position, playerPos) < enemyDetectionRadius * 2 + 1 - 0.1f /*&&
+                    Vector2.Distance(transform.position, playerPos) > 0.1f*/)
                     {
-                        RaycastHit2D hit = hits[i];
-                        /*Debug.Log("---------------");
-                        Debug.Log(hits.Length);
-                        Debug.Log(hit.collider.gameObject);
-                        Debug.Log("===============");*/
+                        hypotenuseOfEnemyToPlayer = playerPos - new Vector2(transform.position.x, transform.position.y);
 
-                        if (hit.collider.gameObject.layer == LayerMask.NameToLayer("Player"))
+                        float radiansTowardPlayer = Mathf.Atan2(hypotenuseOfEnemyToPlayer.y, hypotenuseOfEnemyToPlayer.x);
+                        angleTowardPlayer = radiansTowardPlayer * Mathf.Rad2Deg;
+
+                        // Detect for walls
+                        RaycastHit2D[] hits = Physics2D.RaycastAll(transform.position, hypotenuseOfEnemyToPlayer, enemyDetectionRadius * 2 + 1, combinedPlayerAndWallMask);
+                        Debug.DrawRay(transform.position, hypotenuseOfEnemyToPlayer, Color.red, 0.5f);
+
+                        for (int i = 0; i < hits.Length; i++)
                         {
-                            // Active node update
-                            GameObject[] allObjects = GameObject.FindGameObjectsWithTag("NodePoint");
-                            foreach (GameObject obj in allObjects)
+                            RaycastHit2D hit = hits[i];
+                            /*Debug.Log("---------------");
+                            Debug.Log(hits.Length);
+                            Debug.Log(hit.collider.gameObject);
+                            Debug.Log("===============");*/
+
+                            if (hit.collider.gameObject.layer == LayerMask.NameToLayer("Player"))
                             {
-                                Node n = obj.GetComponent<Node>();
-                                if (Mathf.Round(transform.position.x) == n.transform.position.x && Mathf.Round(transform.position.y) == n.transform.position.y)
+                                // Incorporates same-tile check here since Bat can occupy same tile and remain engaged
+                                if (selectedEnemy == EnemyType.Slime && Vector2.Distance(transform.position, playerPos) > 0.1f)
                                 {
-                                    currentNode = n;
+                                    // Active node update
+                                    GameObject[] allObjects = GameObject.FindGameObjectsWithTag("NodePoint");
+                                    foreach (GameObject obj in allObjects)
+                                    {
+                                        Node n = obj.GetComponent<Node>();
+                                        if (Mathf.Round(transform.position.x) == n.transform.position.x && Mathf.Round(transform.position.y) == n.transform.position.y)
+                                        {
+                                            currentNode = n;
+                                            break;
+                                        }
+                                    }
+
+                                    // Generate path to check for possible reach
+                                    path = AStarManager.instance.GeneratePath(currentNode, AStarManager.instance.FindNearestNode(playerPos));
+                                    //targetPos = path[1].transform.position;
+
+                                    if (path != null)
+                                    {
+                                        canTrackPlayer = true;
+                                    }
+                                    else
+                                    {
+                                        //path.Clear();
+                                        canTrackPlayer = false;
+                                    }
+
+                                    break;
+                                }
+                                else if (selectedEnemy == EnemyType.Bat)
+                                {
+                                    canTrackPlayer = true;
                                     break;
                                 }
                             }
-
-                            // Generate path to check for possible reach
-                            path = AStarManager.instance.GeneratePath(currentNode, AStarManager.instance.FindNearestNode(playerPos));
-                            //targetPos = path[1].transform.position;
-
-                            if (path != null)
+                            else if (hit.collider.gameObject.layer == LayerMask.NameToLayer("Wall"))
                             {
-                                canTrackPlayer = true;
-                            }
-                            else
-                            {
-                                //path.Clear();
                                 canTrackPlayer = false;
+                                break;
                             }
+                        }
+                    }
+                    else
+                    {
+                        canTrackPlayer = false;
+                    }
 
+
+
+                    // Update state
+                    if (!canTrackPlayer && currentState != StateMachine.Patrol && currentHealth > (currentHealthMax * 10) / 100)
+                    {
+                        currentState = StateMachine.Patrol;
+                        //path.Clear();
+                        print("Patrolling");
+                    }
+                    else if (canTrackPlayer && currentState != StateMachine.Engage && currentHealth > (currentHealthMax * 10) / 100)
+                    {
+                        currentState = StateMachine.Engage;
+                        //path.Clear();
+                        print("Engaged");
+                    }
+                    else if (currentState != StateMachine.Evade && currentHealth <= (currentHealthMax * 10) / 100)
+                    {
+                        currentState = StateMachine.Evade;
+                        //path.Clear();
+                        print("Running");
+                    }
+
+                    switch (currentState)
+                    {
+                        case StateMachine.Patrol:
+                            Patrol();
                             break;
-                        }
-                        else if (hit.collider.gameObject.layer == LayerMask.NameToLayer("Wall"))
-                        {
-                            canTrackPlayer = false;
+                        case StateMachine.Engage:
+                            Engage();
                             break;
-                        }
+                        case StateMachine.Evade:
+                            Evade();
+                            break;
                     }
                 }
                 else
                 {
-                    canTrackPlayer = false;
-                }
-
-
-
-                // Update state
-                if (!canTrackPlayer && currentState != StateMachine.Patrol && currentHealth > (currentHealthMax * 10) / 100)
-                {
-                    currentState = StateMachine.Patrol;
-                    //path.Clear();
-                    print("Patrolling");
-                }
-                else if (canTrackPlayer && currentState != StateMachine.Engage && currentHealth > (currentHealthMax * 10) / 100)
-                {
-                    currentState = StateMachine.Engage;
-                    //path.Clear();
-                    print("Engaged");
-                }
-                else if (currentState != StateMachine.Evade && currentHealth <= (currentHealthMax * 10) / 100)
-                {
-                    currentState = StateMachine.Evade;
-                    //path.Clear();
-                    print("Running");
-                }
-
-                switch (currentState)
-                {
-                    case StateMachine.Patrol:
-                        Patrol();
-                        break;
-                    case StateMachine.Engage:
-                        Engage();
-                        break;
-                    case StateMachine.Evade:
-                        Evade();
-                        break;
+                    // If not within distance of player, prevent any movement actions to help preserve initial spawn locations
+                    withinRangeToPerformAction = false;
                 }
             }
+
+            flyingInt = isFlyingLayer ? 1 : 0;
+
+            // Update enemy layer
+            sprite.sortingOrder = (int)(transform.position.y * -10 + (flyingInt * 10));
         }
 
         public void EnemyTakeDamage(string TypeOfAttack)
@@ -207,12 +261,41 @@ namespace TopDownGame
             if (TypeOfAttack == "main")
             {
                 currentHealth -= PlayerController.instance.damageOutput[PlayerController.instance.selectedCharacter];
+                animator.SetInteger("Health", currentHealth);
             }
             else if (TypeOfAttack == "landing")
             {
-                currentHealth -= PlayerController.instance.damageOutput[3];
+                if (canBeLandedOn)
+                {
+                    // Inflict damage from being landed on
+                    currentHealth -= PlayerController.instance.damageOutput[3];
+                    animator.SetInteger("Health", currentHealth);
 
-                // IMPLEMENT PUSH BACK WHEN LANDING; IF ENEMY CANT BE LANDED ON, CALL FUNCTION IN PLAYER SCRIPT THAT PUSHES THEM BACK A TILE
+                    if (currentHealth <= 0)
+                    {
+                        StartCoroutine(DeathAnimation());
+                    }
+                    else
+                    {
+                        CreateAvailableDirections(obstacleMask);
+
+                        // Movement
+                        if (availableDirections.Count > 0)
+                        {
+                            targetPos = new Vector2(Mathf.Round(transform.position.x / 2) * 2, Mathf.Round(transform.position.y / 2) * 2) + availableDirections[Random.Range(0, availableDirections.Count)];
+                            StartCoroutine(MoveEnemy(PlayerController.instance.moveSpeed * 1.2f));
+                        }
+                        else
+                        {
+                            StartCoroutine(DeathAnimation());
+                        }
+                    }
+                }
+                else
+                {
+                    // IMPLEMENT PUSH BACK WHEN LANDING; IF ENEMY CANT BE LANDED ON, CALL FUNCTION IN PLAYER SCRIPT THAT PUSHES THEM BACK A TILE
+
+                }
             }
 
             healthDisplay.transform.localScale = new Vector3((float)currentHealth / currentHealthMax, 1, 1);
@@ -226,103 +309,218 @@ namespace TopDownGame
 
             if (currentHealth <= 0)
             {
-                Destroy(gameObject);
+                StartCoroutine(DeathAnimation());
             }
         }
+
+
+
+
 
         // STATE MACHINE STATES //
         void Patrol()
         {
-            RaycastHit2D hitObstacle;
-
-            availableDirections.Clear();
-
-            // Establishing available directions
-            for (int i = 0; i < allDirections.Count; i++)
+            LayerMask gapCheckMask;
+            
+            if (collidesWithGaps)
             {
-                // Check this direction
-                hitObstacle = Physics2D.Raycast(transform.position, allDirections[i], 2, combinedPlayerAndObstacleMask);
-                Debug.DrawRay(transform.position, allDirections[i], Color.white, 0.5f);
-                if (hitObstacle.collider != null)
-                {
-                    if (hitObstacle.collider.gameObject.layer == LayerMask.NameToLayer("Player"))
-                    {
-                        print("Attack");
-                        break;
-                    }
-                }
-                else
-                {
-                    availableDirections.Add(allDirections[i]);
-                }
+                gapCheckMask = combinedPlayerAndObstacleMask;
             }
+            else
+            {
+                gapCheckMask = combinedPlayerAndWallMask;
+            }
+            
+            // Creates available directions for enemy to move
+            CreateAvailableDirections(gapCheckMask);
 
             // Movement
             if (availableDirections.Count > 0)
             {
                 targetPos = new Vector2(Mathf.Round(transform.position.x / 2) * 2, Mathf.Round(transform.position.y / 2) * 2) + availableDirections[Random.Range(0, availableDirections.Count)];
-                StartCoroutine(MoveEnemy());
+                StartCoroutine(MoveEnemy(patrolMoveSpeed));
             }
-
-            /* Patrol script goes here, is not using node system
-            if (path.Count == 0)
-            {
-                path = AStarManager.instance.GeneratePath(currentNode, AStarManager.instance.NodesInScene()[Random.Range(0, AStarManager.instance.NodesInScene().Length)]);
-            }*/
         }
 
         void Engage()
         {
-            /*path.Clear();
-            path = AStarManager.instance.GeneratePath(currentNode, AStarManager.instance.FindNearestNode(playerPos));
-            /*if (path.Count == 0)
+            if (selectedEnemy == EnemyType.Slime)
             {
-                
-            }
+                // Slime AI pathing
+                targetPos = path[1].transform.position;
 
-            /*for (int i = 1; i < path.Count; i++)
-            {
-                path.RemoveAt(i);
-            }*/
-
-            targetPos = path[1].transform.position;
-
-            if (targetPos == playerPos)
-            {                
-                if (PlayerController.instance.selectedCharacter == 0 && PlayerController.instance.rookShielded)
+                if (targetPos == playerPos)
                 {
-                    hypotenuseOfEnemyToPlayer = playerPos - transform.position;
-
-                    // Detect for shield blocking the attack
-                    RaycastHit2D[] hits = Physics2D.RaycastAll(transform.position, hypotenuseOfEnemyToPlayer, 2, playerAndShieldMask);
-                    Debug.DrawRay(transform.position, hypotenuseOfEnemyToPlayer, Color.magenta, 0.5f);
-
-                    for (int i = 0; i < hits.Length; i++)
+                    if (PlayerController.instance.selectedCharacter == 0 && PlayerController.instance.rookShielded)
                     {
-                        RaycastHit2D hit = hits[i];
+                        hypotenuseOfEnemyToPlayer = playerPos - new Vector2(transform.position.x, transform.position.y);
 
-                        if (hit.collider.gameObject.layer == LayerMask.NameToLayer("Player"))
+                        // Detect for shield blocking the attack
+                        RaycastHit2D[] hits = Physics2D.RaycastAll(transform.position, hypotenuseOfEnemyToPlayer, 2, playerAndShieldMask);
+                        Debug.DrawRay(transform.position, hypotenuseOfEnemyToPlayer, Color.magenta, 0.5f);
+
+                        for (int i = 0; i < hits.Length; i++)
                         {
-                            PlayerController.instance.takeDamage(enemyDamage);
-                            print("Perform attack");
-                            break;
+                            RaycastHit2D hit = hits[i];
+
+                            if (hit.collider.gameObject.layer == LayerMask.NameToLayer("Player"))
+                            {
+                                GetTravelDirection(transform.position);
+                                animator.SetFloat("DirectionAngle", travelDirection);
+                                animator.SetTrigger("DoesAttack");
+
+                                PlayerController.instance.takeDamage(enemyDamage);
+                                print("Perform attack");
+                                break;
+                            }
+                            else if (hit.collider.gameObject.layer == LayerMask.NameToLayer("Shield"))
+                            {
+                                GetTravelDirection(transform.position);
+                                animator.SetFloat("DirectionAngle", travelDirection);
+                                animator.SetTrigger("DoesAttack");
+
+                                print("Deflected!");
+                                break;
+                            }
                         }
-                        else if (hit.collider.gameObject.layer == LayerMask.NameToLayer("Shield"))
-                        {
-                            print("Deflected!");
-                            break;
-                        }
+                    }
+                    else
+                    {
+                        GetTravelDirection(transform.position);
+                        animator.SetFloat("DirectionAngle", travelDirection);
+                        animator.SetTrigger("DoesAttack");
+
+                        PlayerController.instance.takeDamage(enemyDamage);
+                        print("Perform attack");
                     }
                 }
                 else
                 {
+                    StartCoroutine(MoveEnemy(engagedMoveSpeed));
+                }
+            }
+            else if (selectedEnemy == EnemyType.Bat)
+            {
+                // Bat pathing, similar to patrol movement, but direction is targeted
+                // Does not use pathfinding system
+                RaycastHit2D hitObstacle;
+                Vector2 batLocation = transform.position;
+                //Vector2 closestToDesiredDirection = new Vector2();
+                int readyToDeleteItemNumber = 0;
+                //float currentClosestAngle = 720f;
+                float distanceBetweenPlayerandTarget;
+                Vector2 closestTargetToPlayer = new Vector2();
+                float previousMinimumDistance;
+                List<Vector2> reorganizedBatDirections = new List<Vector2>();
+                List<Vector2> tempBatDirections = new List<Vector2>();
+
+                availableDirections.Clear();
+                reorganizedBatDirections.Clear();
+                tempBatDirections.Clear();
+
+                // Check if enemy is already overlapping player to attack
+                if (batLocation == playerPos)
+                {
+                    animator.SetTrigger("DoesAttack");
+
                     PlayerController.instance.takeDamage(enemyDamage);
                     print("Perform attack");
                 }
-            }
-            else
-            {
-                StartCoroutine(MoveEnemy());
+                else
+                {
+                    // Add all bat directions to the temporary list for process of deletion
+                    for (int i = 0; i < allBatDirections.Count; i++)
+                    {
+                        tempBatDirections.Add(allBatDirections[i]);
+                    }
+
+                    print("=========");
+                    print(tempBatDirections.Count);
+
+                    // Reorganize the list based on proximity to the desired direction of travel to reach player
+                    /*for (int i = 0; i < allBatDirections.Count; i++)
+                    {
+                        for (int j = 0; j < tempBatDirections.Count; j++)
+                        {
+                            Vector2 hypotenuseOfBatToTarget = batLocation - (batLocation + tempBatDirections[j]);
+
+                            float batRadiansTowardPlayer = Mathf.Atan2(hypotenuseOfBatToTarget.y, hypotenuseOfBatToTarget.x);
+                            float batAngleTowardPlayer = batRadiansTowardPlayer * Mathf.Rad2Deg;
+
+                            if (batAngleTowardPlayer - angleTowardPlayer + 360 < currentClosestAngle)
+                            {
+                                print(batAngleTowardPlayer - angleTowardPlayer);
+                                currentClosestAngle = batAngleTowardPlayer;
+                                closestToDesiredDirection = tempBatDirections[j];
+                                readyToDeleteItemNumber = j;
+                            }
+                        }
+
+                        reorganizedBatDirections.Add(closestToDesiredDirection);
+                        tempBatDirections.Remove(tempBatDirections[readyToDeleteItemNumber]);
+
+                        if (tempBatDirections.Count == 0)
+                        {
+                            break;
+                        }
+                    }*/
+
+                    for (int i = 0; i < allBatDirections.Count; i++)
+                    {
+                        previousMinimumDistance = 20;
+
+                        for (int j = 0; j < tempBatDirections.Count; j++)
+                        {
+                            distanceBetweenPlayerandTarget = Vector2.Distance(playerPos, batLocation + tempBatDirections[j]);
+
+                            if (previousMinimumDistance > distanceBetweenPlayerandTarget)
+                            {
+                                previousMinimumDistance = distanceBetweenPlayerandTarget;
+                                closestTargetToPlayer = tempBatDirections[j];
+                                readyToDeleteItemNumber = j;
+                            }
+                            //print(distanceBetweenPlayerandTarget);
+                        }
+
+                        reorganizedBatDirections.Add(closestTargetToPlayer);
+                        tempBatDirections.Remove(tempBatDirections[readyToDeleteItemNumber]);
+
+                        if (tempBatDirections.Count == 0)
+                        {
+                            break;
+                        }
+                    }
+
+                    /*
+                    for (int i = 0; i < reorganizedBatDirections.Count; i++)
+                    {
+                        print(reorganizedBatDirections[i]);
+                    }*/
+
+                    // Go down the new list of directions based on closest direction to desired direction
+                    // Goes in opposite direction (for whatever reason), reverse to create evade movement
+                    for (int i = reorganizedBatDirections.Count - 1; i >= 0; i--)
+                    {
+                        // Check this direction
+                        hitObstacle = Physics2D.Raycast(transform.position, reorganizedBatDirections[i],
+                            Mathf.Sqrt(Mathf.Pow(reorganizedBatDirections[i].x, 2) + Mathf.Pow(reorganizedBatDirections[i].y, 2)),
+                            wallMask);
+                        Debug.DrawRay(transform.position, reorganizedBatDirections[i], Color.white, 0.5f);
+                        if (hitObstacle.collider == null)
+                        {
+                            //availableDirections.Add(reorganizedBatDirections[i]);
+                            targetPos = new Vector2(Mathf.Round(transform.position.x / 2) * 2, Mathf.Round(transform.position.y / 2) * 2) + reorganizedBatDirections[i];
+                            StartCoroutine(MoveEnemy(engagedMoveSpeed));
+                        }
+                    }
+
+                    /* Movement
+                    if (availableDirections.Count > 0)
+                    {
+                        targetPos = new Vector2(Mathf.Round(transform.position.x / 2) * 2, Mathf.Round(transform.position.y / 2) * 2) + availableDirections[Random.Range(0, availableDirections.Count)];
+                        StartCoroutine(MoveEnemy(engagedMoveSpeed));
+                    }*/
+                }
             }
         }
 
@@ -350,26 +548,119 @@ namespace TopDownGame
             }
         }
 
-        IEnumerator MoveEnemy()
+        // 0 does NOT include player in mask, 1 DOES include player in mask
+        void CreateAvailableDirections(LayerMask maskCheck)
         {
-            Vector2 startPos = transform.position;
-            float moveDuration = Vector2.Distance(startPos, targetPos) * individualActionInterval / 8;
-            float timeElapsed = 0;
+            RaycastHit2D hitObstacle;
+            List<Vector2> specifiedEnemyTypeDirections = new List<Vector2>();
 
-            while (timeElapsed < moveDuration)
+            availableDirections.Clear();
+
+            // Direction determination based on which enemy is which
+            if (selectedEnemy == EnemyType.Slime)
             {
-                transform.position = Vector2.Lerp(startPos, targetPos, timeElapsed / moveDuration);
-                timeElapsed += Time.deltaTime;
+                specifiedEnemyTypeDirections = allSlimeDirections;
+            }
+            else if (selectedEnemy == EnemyType.Bat)
+            {
+                specifiedEnemyTypeDirections = allBatDirections;
+            }
+
+            // Establishing available directions based on enemy type
+            for (int i = 0; i < specifiedEnemyTypeDirections.Count; i++)
+            {
+                // Check this direction
+                hitObstacle = Physics2D.Raycast(transform.position, specifiedEnemyTypeDirections[i],
+                    Mathf.Sqrt(Mathf.Pow(specifiedEnemyTypeDirections[i].x, 2) + Mathf.Pow(specifiedEnemyTypeDirections[i].y, 2)), 
+                    maskCheck);
+                Debug.DrawRay(transform.position, specifiedEnemyTypeDirections[i], Color.white, 0.5f);
+                if (hitObstacle.collider != null)
+                {
+                    if (hitObstacle.collider.gameObject.layer == LayerMask.NameToLayer("Player"))
+                    {
+                        print("Attack");
+                        break;
+                    }
+                }
+                else
+                {
+                    availableDirections.Add(specifiedEnemyTypeDirections[i]);
+                }
+            }
+        }
+
+        IEnumerator MoveEnemy(float speedMult)
+        {
+            if (withinRangeToPerformAction)
+            {
+                Vector2 startPos = transform.position;
+                GetTravelDirection(startPos);
+                animator.SetFloat("DirectionAngle", travelDirection);
+
+                float moveDuration = Vector2.Distance(startPos, targetPos) * individualActionInterval / 8;
+                float timeElapsed = 0;
+                animator.SetBool("IsMoving", true);
+
+                // Find direction of movement
+
+                while (timeElapsed < (moveDuration / speedMult))
+                {
+                    transform.position = Vector2.Lerp(startPos, targetPos, timeElapsed / (moveDuration / speedMult));
+                    timeElapsed += Time.deltaTime * speedMult;
+                    yield return null;
+                }
+
+                transform.position = targetPos;
+                animator.SetBool("IsMoving", false);
+            }
+            else
+            {
                 yield return null;
             }
         }
 
         IEnumerator DamageFlash()
         {
-            sprite.color = new Color(1, 0.6f, 0.6f);
-            yield return new WaitForSeconds(0.1f);
-            sprite.color = new Color(1, 1, 1);
-            yield return null;
+            WaitForSeconds delayFlash = new WaitForSeconds(0.1f);
+            
+            for (int i = 0; i < 2; i++)
+            {
+                sprite.color = new Color(1, 0.6f, 0.6f);
+                yield return delayFlash;
+                sprite.color = new Color(1, 1, 1);
+                yield return delayFlash;
+                yield return null;
+            }
+        }
+
+        IEnumerator DeathAnimation()
+        {
+            WaitForSeconds fadeAway = new WaitForSeconds(0.01f);
+            
+            gameObject.layer = 0;
+            healthDisplayBG.SetActive(false);
+            circCollider.enabled = false;
+            
+            while (Vector2.Distance(transform.position, PlayerController.instance.transform.position)
+                < GameController.instance.enemyDespawnDistance)
+            {
+                yield return null;
+            }
+
+            for (float i = 1f; i > 0f; i -= 0.05f)
+            {
+                sprite.color = new Color(1, 1, 1, i);
+                yield return fadeAway;
+            }
+
+            Destroy(gameObject);
+        }
+
+        void GetTravelDirection(Vector2 startingPosition)
+        {
+            Vector2 directionFromStartToTarget = startingPosition - targetPos;
+            float radianTravelDirection = Mathf.Atan2(directionFromStartToTarget.y, directionFromStartToTarget.x);
+            travelDirection = radianTravelDirection * Mathf.Rad2Deg;
         }
     }
 }

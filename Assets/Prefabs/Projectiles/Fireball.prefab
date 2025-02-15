@@ -109,7 +109,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5e3659d5473505a4cbef71cb4d35c852, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  sprite: {fileID: 4535789571494896162}
+  display: {fileID: 4535789571494896162}
+  sprite: {fileID: 4747333625857893610}
   projSpeed: 11
   enemyMask:
     serializedVersion: 2
@@ -132,7 +133,7 @@ GameObject:
   - component: {fileID: 7811086928602777648}
   - component: {fileID: 4747333625857893610}
   m_Layer: 0
-  m_Name: Sprite
+  m_Name: Display
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

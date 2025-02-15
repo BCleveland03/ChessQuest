@@ -31,6 +31,8 @@ namespace TopDownGame {
         public GameObject projectileCooldownBar;
 
         public SpriteRenderer spr;
+        public Animator animator;
+
         [SerializeField]
         Sprite[] appearance;
 
@@ -55,6 +57,7 @@ namespace TopDownGame {
 
         private float moveDuration;
         public float moveModifier = 0.08f;
+        public float mouseDirection;
 
         // State Tracking
         public int selectedCharacter = 0;
@@ -68,6 +71,7 @@ namespace TopDownGame {
 
         private Vector3 mousePositionInWorld;
         public Vector2 targetedPos;
+        public float moveSpeed;
 
         [Header("Health and Status Tracking")]
         public int rookHealthMax = 100;
@@ -113,6 +117,7 @@ namespace TopDownGame {
 
             currentScroll = GameController.instance.scrollSensitivity / 2;
             prevSelectedChar = selectedCharacter;
+            animator.SetInteger("SelectedCharacter", selectedCharacter);
             targetedPos = targetedPos = new Vector3(Mathf.RoundToInt(transform.position.x), Mathf.RoundToInt(transform.position.y));
             gameObject.SetActive(true);
             spawnSelectableTiles();
@@ -166,6 +171,8 @@ namespace TopDownGame {
                 }
 
                 activeScrolling = true;
+
+                animator.SetInteger("SelectedCharacter", selectedCharacter);
             }
 
             // Manual character swapping
@@ -175,6 +182,7 @@ namespace TopDownGame {
                 if (Input.GetKeyDown(GameController.instance.keyChar0) && characterHealths[0] > 0)
                 {
                     selectedCharacter = 0;
+                    animator.SetInteger("SelectedCharacter", selectedCharacter);
                     updateHealthUI();
                     currentScroll = 0;
                     TEMPcharSwap = true;
@@ -187,6 +195,7 @@ namespace TopDownGame {
                 if (Input.GetKeyDown(GameController.instance.keyChar1) && characterHealths[1] > 0f)
                 {
                     selectedCharacter = 1;
+                    animator.SetInteger("SelectedCharacter", selectedCharacter);
                     updateHealthUI();
                     currentScroll = 0;
                     TEMPcharSwap = true;
@@ -199,6 +208,7 @@ namespace TopDownGame {
                 if (Input.GetKeyDown(GameController.instance.keyChar2) && characterHealths[2] > 0f)
                 {
                     selectedCharacter = 2;
+                    animator.SetInteger("SelectedCharacter", selectedCharacter);
                     updateHealthUI();
                     currentScroll = 0;
                     TEMPcharSwap = true;
@@ -214,7 +224,7 @@ namespace TopDownGame {
             // Detects for a left click on a selectable tile; if true, then move character, update moves, and clear preexisting tiles
             if(Input.GetMouseButtonDown(0) && GameController.instance.selectedTile != null)
             {
-                StartCoroutine(MovePlayer(GameController.instance.selectedTile.transform.position));
+                StartCoroutine(MovePlayer(GameController.instance.selectedTile.transform.position, moveSpeed));
                 clearExistingTiles();
             }
 
@@ -226,28 +236,31 @@ namespace TopDownGame {
             Vector3 directionFromPlayerToMouse = transform.position - mousePositionInWorld;
 
             float radiansTowardMouse = Mathf.Atan2(directionFromPlayerToMouse.y, directionFromPlayerToMouse.x);
-            float angleTowardMouse = radiansTowardMouse * Mathf.Rad2Deg + 180;
+            mouseDirection = radiansTowardMouse * Mathf.Rad2Deg + 180;
 
             // Snap to East
-            if (angleTowardMouse <= 45 || angleTowardMouse > 315)
+            if (mouseDirection <= 45 || mouseDirection > 315)
             {
                 facingDirection = 0;
             }
             // Snap to North
-            else if (angleTowardMouse <= 135 && angleTowardMouse > 45)
+            else if (mouseDirection <= 135 && mouseDirection > 45)
             {
                 facingDirection = 90;
             }
             // Snap to South
-            else if (angleTowardMouse <= 315 && angleTowardMouse > 225)
+            else if (mouseDirection <= 315 && mouseDirection > 225)
             {
-                facingDirection = -90;
+                facingDirection = 270;
             }
             // Snap to West
             else
             {
                 facingDirection = 180;
             }
+
+            animator.SetInteger("DirectionFacing", facingDirection);
+
 
 
 
@@ -285,6 +298,9 @@ namespace TopDownGame {
                     print("Performed attack toward " + rotationalPivot.transform.eulerAngles.z + "*");
                 }
             }
+
+            // Update enemy layer
+            spr.sortingOrder = (int)(transform.position.y * -10 + 5);
         }
 
         public void clearExistingTiles()
@@ -830,6 +846,7 @@ namespace TopDownGame {
                 if (knockedOutCharacters == 1)
                 {
                     selectedCharacter = nfmod(selectedCharacter + 1, 3);
+                    animator.SetInteger("SelectedCharacter", selectedCharacter);
                     clearExistingTiles();
                     spawnSelectableTiles();
                 }
@@ -840,6 +857,7 @@ namespace TopDownGame {
                         if (characterHealths[i] > 0)
                         {
                             selectedCharacter = i;
+                            animator.SetInteger("SelectedCharacter", selectedCharacter);
                             clearExistingTiles();
                             spawnSelectableTiles();
                         }
@@ -917,6 +935,7 @@ namespace TopDownGame {
             else
             {
                 StartCoroutine(DamageFlash());
+                animator.SetBool("HasBeenDamaged", true);
             }
 
             updateHealthUI();
@@ -932,9 +951,10 @@ namespace TopDownGame {
             return ((input * 2) - 1);
         }
 
-        IEnumerator MovePlayer(Vector2 targetPos)
+        IEnumerator MovePlayer(Vector2 targetPos, float speedMult)
         {
             movementCoroutineIsActive = true;
+            animator.SetBool("IsMoving", true);
 
             Vector2 startPos = transform.position;
             targetedPos = new Vector3((Mathf.RoundToInt(targetPos.x / 2)) * 2, (Mathf.RoundToInt(targetPos.y / 2)) * 2);
@@ -955,12 +975,12 @@ namespace TopDownGame {
             GameController.instance.UpdatePlayerStats();
 
             // Perform the movement
-            while (timeElapsed < moveDuration)
+            while (timeElapsed < (moveDuration / speedMult))
             {
                 // Move player to desired destination over a fixed period of time
-                transform.position = Vector2.Lerp(startPos, targetedPos, timeElapsed / moveDuration);
+                transform.position = Vector2.Lerp(startPos, targetedPos, timeElapsed / (moveDuration / speedMult));
 
-                timeElapsed += Time.deltaTime;
+                timeElapsed += Time.deltaTime * speedMult;
                 yield return null;
             }
 
@@ -969,6 +989,7 @@ namespace TopDownGame {
             CheckLanding();
 
             movementCoroutineIsActive = false;
+            animator.SetBool("IsMoving", false);
             spawnSelectableTiles();
             NodeController.instance.ReinstantiateNodePoints();
         }
@@ -1021,7 +1042,7 @@ namespace TopDownGame {
             float actionDelay = actionDelays[selectedCharacter];
 
             // Time alloted for character animations
-            float animationTime = 0.5f;
+            float animationTime = 0.4f;
             WaitForSeconds delayTime = new WaitForSeconds(animationTime + actionDelay);
 
             attackCoroutineIsActive = true;
@@ -1033,6 +1054,7 @@ namespace TopDownGame {
             {
                 rookShield.SetActive(true);
                 rookShielded = true;
+                animator.SetBool("IsAttacking", true);
 
                 for (int i = -1; i < 2; i++)
                 {
@@ -1064,19 +1086,20 @@ namespace TopDownGame {
             }
             else if (selectedCharacter == 1)
             {
+                animator.SetBool("IsAttacking", true);
+
                 Vector3 directionFromPlayerToTarget = transform.position - projectileTargetTile.transform.position;
 
                 // Derives the radian angle and converts it to degrees for projectile's target direction
                 float radiansTowardTarget = Mathf.Atan2(directionFromPlayerToTarget.y, directionFromPlayerToTarget.x);
                 float angleTowardTarget = radiansTowardTarget * Mathf.Rad2Deg + 180;
 
-                // Spawns in projectile
-                GameObject newProjectile = Instantiate(bishopProjectile);
-                newProjectile.transform.position = transform.position;
-                newProjectile.transform.rotation = Quaternion.Euler(0, 0, angleTowardTarget);
+                StartCoroutine(FireballDelay(angleTowardTarget));
             }
             else if (selectedCharacter == 2)
             {
+                animator.SetBool("IsAttacking", true);
+
                 // First check for wall: converts dir to rads for Vector2 dir, converts rad to extend the full 2 units
                 tempHitDir = new Vector2(Mathf.Cos(facingDirection * Mathf.Deg2Rad), Mathf.Sin(facingDirection * Mathf.Deg2Rad));
                 tempEndPos = new Vector2(Mathf.Round(tempHitDir.x) * 2 + transform.position.x, Mathf.Round(tempHitDir.y) * 2 + transform.position.y);
@@ -1129,10 +1152,27 @@ namespace TopDownGame {
 
             yield return delayTime;
 
+            animator.SetBool("IsAttacking", false);
             ResetAttackStates();
             spawnSelectableTiles();
             attackCoroutineIsActive = false;
         }
+
+        IEnumerator FireballDelay(float angle)
+        {
+            // Small delay to match animation
+            yield return new WaitForSeconds(0.25f);
+
+            // Spawns in projectile
+            GameObject newProjectile = Instantiate(bishopProjectile);
+            newProjectile.transform.position = transform.position;
+            newProjectile.transform.rotation = Quaternion.Euler(0, 0, angle);
+        }
+
+
+
+
+
 
         IEnumerator ActivateActionCooldownBar(Color color, float durationPeriod)
         {
@@ -1169,10 +1209,16 @@ namespace TopDownGame {
 
         IEnumerator DamageFlash()
         {
-            spr.color = new Color(1, 0.6f, 0.6f);
+            WaitForSeconds damagedAnimationTime = new WaitForSeconds(0.5f);
+
+            yield return damagedAnimationTime;
+            animator.SetBool("HasBeenDamaged", false);
+            
+            /* Outdated code
+             * spr.color = new Color(1, 0.6f, 0.6f);
             yield return new WaitForSeconds(0.1f);
             spr.color = new Color(1, 1, 1);
-            yield return null;
+            yield return null;*/
         }
 
         /*IEnumerator IneligibleTarget()

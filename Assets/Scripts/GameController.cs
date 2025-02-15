@@ -29,6 +29,7 @@ namespace TopDownGame {
         public int totalMoves = 0;
         public float distanceFromEnd;
         public bool levelEnded = false;
+        public int enemyDespawnDistance;
         
         [Header ("User Settings")]
         public float scrollSensitivity;
@@ -102,12 +103,15 @@ namespace TopDownGame {
         {
             if (!context.started) return;
 
-            var rayHit = Physics2D.GetRayIntersection(mainCam.ScreenPointToRay(Mouse.current.position.ReadValue()), tileMask);
-            if (!rayHit.collider) return;
-
-            if(rayHit.collider.gameObject.tag == "SelectableTiles")
+            RaycastHit2D[] rayHit = Physics2D.GetRayIntersectionAll(mainCam.ScreenPointToRay(Mouse.current.position.ReadValue()), tileMask);
+            for(int i = 0; i < rayHit.Length; i++)
             {
-                selectedTile = rayHit.collider.gameObject;
+                if (!rayHit[i].collider) continue;
+
+                if (rayHit[i].collider.gameObject.tag == "SelectableTiles")
+                {
+                    selectedTile = rayHit[i].collider.gameObject;
+                }
             }
         }
 

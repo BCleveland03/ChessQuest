@@ -8,7 +8,8 @@ namespace TopDownGame
     {
         // Outlets
         Rigidbody2D proj;
-        public GameObject sprite;
+        public GameObject display;
+        public SpriteRenderer sprite;
 
         // Configuration
         public float projSpeed;
@@ -25,17 +26,21 @@ namespace TopDownGame
         {
             proj = GetComponent<Rigidbody2D>();
             proj.velocity = transform.right * projSpeed;
-            sprite.transform.rotation = Quaternion.Euler(0, 0, 0);
+            display.transform.rotation = Quaternion.Euler(0, 0, 0);
         }
 
         void Update()
         {
             // Checks if the distance from the player exceeds the distance between the target's position from the player (with some extra room)
             if (Vector2.Distance(transform.position, PlayerController.instance.transform.position) 
-                > Vector2.Distance(PlayerController.instance.projectileTargetTile.transform.position, PlayerController.instance.transform.position) * 1.4f)
+                > Vector2.Distance(PlayerController.instance.projectileTargetTile.transform.position, PlayerController.instance.transform.position) + 2)
             {
+                proj.velocity = Vector2.zero;
                 Destroy(gameObject);
             }
+
+            // Update enemy layer
+            sprite.sortingOrder = (int)(transform.position.y * -10 -1);
         }
 
         // Destroys when it comes into contact with something
@@ -49,7 +54,9 @@ namespace TopDownGame
                 enemy.EnemyTakeDamage("main");
             }
 
-            Destroy(gameObject);
+            // Switch to fireball collision animation
+            proj.velocity = Vector2.zero;
+            Destroy(gameObject, 0.1f);
         }
     }
 }

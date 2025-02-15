@@ -68,6 +68,18 @@ namespace TopDownGame
                         spawnedNode.transform.position = nodeDetector.transform.position;
                         spawnedNode.name = nodeIdentification[tempID];
 
+                        SpriteRenderer nodeSprite = spawnedNode.GetComponent<SpriteRenderer>();
+                        float tileDist = Vector2.Distance(spawnedNode.transform.position, PlayerController.instance.transform.position);
+
+                        if (tileDist < 7f)
+                        {
+                            nodeSprite.color = new Color(1, 1, 1, Mathf.Clamp(1 / tileDist - 0.0625f, 0f, 0.4375f));
+                        }
+                        else
+                        {
+                            nodeSprite.color = new Color(1, 1, 1, 0);
+                        }
+
                         nodeGridCount++;
                     }
                 }
