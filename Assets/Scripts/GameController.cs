@@ -86,16 +86,33 @@ namespace TopDownGame {
             // TEMP scene reset
             if (Input.GetKeyDown(KeyCode.Space))
             {
-                SceneManager.LoadScene("PrototypeScene");
+                SceneManager.LoadScene("LevelT-2");
             }
 
             UpdateWorldStats();
+            CheckForSelectableTileMouseHover();
         }
 
         // Checks if this is an integer
         public bool IsThisInteger(float floatVal)
         {
             return Mathf.Approximately(floatVal, Mathf.RoundToInt(floatVal));
+        }
+
+        // Detection for when mouse is hovering over selectable tiles; set to trigger hover animation
+
+        public void CheckForSelectableTileMouseHover()
+        {
+            RaycastHit2D[] rayCheck = Physics2D.GetRayIntersectionAll(mainCam.ScreenPointToRay(Mouse.current.position.ReadValue()), tileMask);
+            for (int i = 0; i < rayCheck.Length; i++)
+            {
+                if (!rayCheck[i].collider) continue;
+
+                if (rayCheck[i].collider.gameObject.tag == "SelectableTiles")
+                {
+
+                }
+            }
         }
 
         // Left click detection for selectable tiles

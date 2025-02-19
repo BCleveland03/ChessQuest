@@ -256,11 +256,11 @@ namespace TopDownGame
             sprite.sortingOrder = (int)(transform.position.y * -10 + (flyingInt * 10));
         }
 
-        public void EnemyTakeDamage(string TypeOfAttack)
+        public void EnemyTakeDamage(string TypeOfAttack, float mult)
         {
             if (TypeOfAttack == "main")
             {
-                currentHealth -= PlayerController.instance.damageOutput[PlayerController.instance.selectedCharacter];
+                currentHealth -= (int)(PlayerController.instance.damageOutput[PlayerController.instance.selectedCharacter] * mult);
                 animator.SetInteger("Health", currentHealth);
             }
             else if (TypeOfAttack == "landing")

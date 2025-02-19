@@ -3,7 +3,8 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace TopDownGame {
+namespace TopDownGame
+{
     public enum PlayerDirections
     {
         North = 0,
@@ -1017,7 +1018,7 @@ namespace TopDownGame {
                     if (enemy)
                     {
                         print("Landed on enemy");
-                        enemy.EnemyTakeDamage("landing");
+                        enemy.EnemyTakeDamage("landing", 1);
                     }
                 }
             }
@@ -1078,7 +1079,7 @@ namespace TopDownGame {
 
                             if (enemy)
                             {
-                                enemy.EnemyTakeDamage("main");
+                                enemy.EnemyTakeDamage("main", 1);
                             }
                         }
                     }
@@ -1120,7 +1121,7 @@ namespace TopDownGame {
 
                         if (enemy)
                         {
-                            enemy.EnemyTakeDamage("main");
+                            enemy.EnemyTakeDamage("main", 1);
                         }
                     }
 
@@ -1143,7 +1144,7 @@ namespace TopDownGame {
 
                             if (enemy)
                             {
-                                enemy.EnemyTakeDamage("main");
+                                enemy.EnemyTakeDamage("main", 1);
                             }
                         }
                     }
