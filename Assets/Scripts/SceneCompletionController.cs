@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 
 namespace TopDownGame
@@ -11,9 +12,12 @@ namespace TopDownGame
         {
             if (collision.gameObject.tag == "Player")
             {
+                // Stop time and revoke control for end-of-level sequence
                 GameController.instance.levelEnded = true;
                 print("Level complete!");
                 print("Insert transition out of level.");
+
+                GameController.instance.InitiateFade(false);
             }
         }
 

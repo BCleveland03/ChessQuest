@@ -25,6 +25,7 @@ namespace TopDownGame
 
         // State Tracking
         public bool belongsToPlayer;
+        bool fireballSpent = false;
 
         // Methods
         void Start()
@@ -32,7 +33,7 @@ namespace TopDownGame
             proj = GetComponent<Rigidbody2D>();
             proj.velocity = transform.right * projSpeed;
             //GetComponentInChildren<Transform>().eulerAngles = new Vector3(0, 0, transform.parent.rotation.z + (transform.parent.rotation.z * -1));
-            spritePivot.rotation = Quaternion.Euler(new Vector3(0, 0, transform.rotation.z + (transform.rotation.z * -1)));
+            spritePivot.rotation = Quaternion.Euler(0, 0, transform.rotation.z + (transform.rotation.z * -1));
 
             // Spawn at correct layer
             spriteDisplay.GetComponent<SpriteRenderer>().sortingOrder = (int)(transform.position.y * -10 - 1);
@@ -56,24 +57,30 @@ namespace TopDownGame
         // Destroys when it comes into contact with something
         void OnCollisionEnter2D()
         {
-            Collider2D[] collisions = Physics2D.OverlapCircleAll(transform.position, 0.75f, enemyMask);
-
-            for (int i = 0; i < collisions.Length; i++)
+            if (!fireballSpent)
             {
-                if (collisions[i].gameObject.layer == LayerMask.NameToLayer("Enemy"))
+                fireballSpent = true;
+                Collider2D[] collisions = Physics2D.OverlapCircleAll(transform.position, 0.75f, enemyMask);
+
+                for (int i = 0; i < collisions.Length; i++)
                 {
-                    //Collider2D hit = Physics2D.OverlapCircle(transform.position, 0.75f, enemyMask);
-                    print("Dealt damage to enemy");
+                    if (collisions[i].gameObject.layer == LayerMask.NameToLayer("Enemy"))
+                    {
+                        //Collider2D hit = Physics2D.OverlapCircle(transform.position, 0.75f, enemyMask);
+                        //print("Dealt damage to enemy");
+                        print(collisions[i].gameObject.name);
 
-                    EnemyMasterController enemy = collisions[i].GetComponent<EnemyMasterController>();
-                    enemy.EnemyTakeDamage("main", 1 / collisions.Length);
+                        EnemyMasterController enemy = collisions[i].GetComponent<EnemyMasterController>();
+                        enemy.EnemyTakeDamage("main", 1); // collisions.Length);
+                    }
                 }
-            }
+                //print(collisions.Length);
 
-            // Switch to fireball collision animation
-            proj.velocity = Vector2.zero;
-            spriteDisplay.GetComponent<Animator>().SetTrigger("Explode");
-            Destroy(gameObject, 0.34f);
+                // Switch to fireball collision animation
+                proj.velocity = Vector2.zero;
+                spriteDisplay.GetComponent<Animator>().SetTrigger("Explode");
+                Destroy(gameObject, 0.34f);
+            }
         }
     }
 }

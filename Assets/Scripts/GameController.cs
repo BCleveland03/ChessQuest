@@ -18,6 +18,8 @@ namespace TopDownGame {
         public GameObject endPoint;
 
         [Header("UI")]
+        public Image loadingScreen;
+        public TMP_Text loadingText;
         public TMP_Text charSwapCounter;
         public TMP_Text moveCounter;
         public TMP_Text distanceCounter;
@@ -38,6 +40,8 @@ namespace TopDownGame {
         public float sfxVolume;
 
         [Header("Time and Pause State")]
+        public bool firstActionMade = false;
+        bool startedCounter = false;
         float unroundedGlobalTimer;
         public float globalTimer = 0;
         public float previousTimeScale = 1;
@@ -66,13 +70,19 @@ namespace TopDownGame {
             isPaused = false;
             invertScroll = 0;
             showCooldown = true;
+
+            StartCoroutine(FadeAwayLoadingScreen(true));
+            StartCoroutine(StartTimer());
         }
 
         void Update()
         {
-            // Global time control
-            unroundedGlobalTimer += Time.deltaTime;
-            globalTimer = Mathf.Ceil(unroundedGlobalTimer * 10) / 10;
+            if (startedCounter && !levelEnded)
+            {
+                // Global time control
+                unroundedGlobalTimer += Time.deltaTime;
+                globalTimer = Mathf.Ceil(unroundedGlobalTimer * 10) / 10;
+            }
 
             // Distance from player to end value
             distanceFromEnd = Mathf.Round(Vector2.Distance(PlayerController.instance.transform.position, endPoint.transform.position) * 5) / 10;
@@ -181,6 +191,54 @@ namespace TopDownGame {
             else
             {
                 moveCounter.text = "Moves: 999+";
+            }
+        }
+
+        public void InitiateFade(bool fadeaway)
+        {
+            StartCoroutine(FadeAwayLoadingScreen(fadeaway));
+        }
+
+        IEnumerator StartTimer()
+        {
+            while (!firstActionMade)
+            {
+                yield return null;
+            }
+
+            startedCounter = true;
+        }
+
+        IEnumerator FadeAwayLoadingScreen(bool fadeaway)
+        {
+            WaitForSeconds fadeSpeed = new WaitForSeconds(0.025f);
+            
+            if (fadeaway)
+            {
+                for (int i = 10; i > 0; i --)
+                {
+                    loadingScreen.color = new Color(1, 1, 1, i / 10f);
+                    loadingText.color = new Color(1, 1, 1, i / 10f);
+                    yield return fadeSpeed;
+                }
+
+                loadingScreen.color = new Color(1, 1, 1, 0);
+                loadingText.color = new Color(1, 1, 1, 0);
+            }
+            else
+            {
+                for (int i = 0; i < 10; i++)
+                {
+                    loadingScreen.color = new Color(1, 1, 1, i / 10f);
+                    loadingText.color = new Color(1, 1, 1, i / 10f);
+                    yield return fadeSpeed;
+                }
+
+                loadingScreen.color = new Color(1, 1, 1, 1);
+                loadingText.color = new Color(1, 1, 1, 1);
+
+                // Temp set up; will reset scene
+                SceneManager.LoadScene(SceneManager.GetActiveScene().name);
             }
         }
     }

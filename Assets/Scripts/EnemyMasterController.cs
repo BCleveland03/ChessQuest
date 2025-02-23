@@ -380,6 +380,7 @@ namespace TopDownGame
                                 animator.SetTrigger("DoesAttack");
 
                                 print("Deflected!");
+                                PlayerController.instance.SpawnParticle(PlayerController.instance.facingDirection);
                                 break;
                             }
                         }

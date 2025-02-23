@@ -5,18 +5,6 @@ using UnityEngine.UI;
 
 namespace TopDownGame
 {
-    public enum PlayerDirections
-    {
-        North = 0,
-        Northeast = 1,
-        East = 2,
-        Southeast = 3,
-        South = 4,
-        Southwest = 5,
-        West = 6,
-        Northwest = 7
-    }
-    
     public class PlayerController : MonoBehaviour
     {
         // Outlet
@@ -41,6 +29,7 @@ namespace TopDownGame
         public GameObject rookShield;
         public GameObject bishopProjectile;
         public GameObject projectileTargetTile;
+        public GameObject meleeParticles;
 
         [Header("Health UI")]
         public Image frontHealthBar;
@@ -225,6 +214,9 @@ namespace TopDownGame
             // Detects for a left click on a selectable tile; if true, then move character, update moves, and clear preexisting tiles
             if(Input.GetMouseButtonDown(0) && GameController.instance.selectedTile != null)
             {
+                // Activate first action bool
+                GameController.instance.firstActionMade = true;
+
                 StartCoroutine(MovePlayer(GameController.instance.selectedTile.transform.position, moveSpeed));
                 clearExistingTiles();
             }
@@ -283,6 +275,9 @@ namespace TopDownGame
             // Check to see if attack can be made available
             if (Input.GetMouseButtonDown(1) && !movementCoroutineIsActive && !attackCoroutineIsActive)
             {
+                // Activate first action bool
+                GameController.instance.firstActionMade = true;
+                
                 // Check specifically if bishop is selected, so it can then check if the target is an elegible target
                 if (selectedCharacter == 1)
                 {
@@ -952,6 +947,10 @@ namespace TopDownGame
             return ((input * 2) - 1);
         }
 
+
+
+
+
         IEnumerator MovePlayer(Vector2 targetPos, float speedMult)
         {
             movementCoroutineIsActive = true;
@@ -991,8 +990,12 @@ namespace TopDownGame
 
             movementCoroutineIsActive = false;
             animator.SetBool("IsMoving", false);
-            spawnSelectableTiles();
-            NodeController.instance.ReinstantiateNodePoints();
+
+            if (!GameController.instance.levelEnded)
+            {
+                spawnSelectableTiles();
+                NodeController.instance.ReinstantiateNodePoints();
+            }
         }
 
         public void CheckLanding()
@@ -1111,6 +1114,9 @@ namespace TopDownGame
                 // If no wall is detected in this spot, then check that spot again specifically for enemies using its coordinates
                 if (hitDetect.collider == null)
                 {
+                    // Spawn the slash particle
+                    SpawnParticle(facingDirection);
+                    
                     // Enemy check on this tile
                     hits = Physics2D.OverlapCircleAll(tempEndPos, 0.9f, enemyMask);
 
@@ -1168,6 +1174,14 @@ namespace TopDownGame
             GameObject newProjectile = Instantiate(bishopProjectile);
             newProjectile.transform.position = transform.position;
             newProjectile.transform.rotation = Quaternion.Euler(0, 0, angle);
+        }
+
+        public void SpawnParticle(int direction)
+        {
+            // Spawns in projectile
+            GameObject newParticle = Instantiate(meleeParticles);
+            newParticle.transform.position = transform.position;
+            newParticle.transform.rotation = Quaternion.Euler(0, 0, direction);
         }
 
 
