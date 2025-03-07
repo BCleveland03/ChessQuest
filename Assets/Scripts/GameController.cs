@@ -17,7 +17,12 @@ namespace TopDownGame {
         public LayerMask tileMask;
         public GameObject endPoint;
 
+        [Header ("Scene List")]
+        public List<string> sceneList = new List<string>();
+        public int currentScene;
+
         [Header("UI")]
+        public Canvas activeCanvas;
         public Image loadingScreen;
         public TMP_Text loadingText;
         public TMP_Text charSwapCounter;
@@ -34,7 +39,7 @@ namespace TopDownGame {
         public int enemyDespawnDistance;
         
         [Header ("User Settings")]
-        public float scrollSensitivity;
+        public int scrollSensitivity;
         public int invertScroll;
         public bool showCooldown;
         public float sfxVolume;
@@ -61,18 +66,29 @@ namespace TopDownGame {
             instance = this;
 
             mainCam = Camera.main;
+            activeCanvas.gameObject.SetActive(true);
         }
 
         void Start()
         {
             UpdatePlayerStats();
+            MenuController.instance.LoadSettingPrefs();
 
             isPaused = false;
-            invertScroll = 0;
-            showCooldown = true;
 
+            loadingScreen.gameObject.SetActive(true);
             StartCoroutine(FadeAwayLoadingScreen(true));
             StartCoroutine(StartTimer());
+
+            // Check to get active scene in list
+            for (int i = 0; i < sceneList.Count; i++)
+            {
+                if (sceneList[i] == SceneManager.GetActiveScene().name)
+                {
+                    currentScene = i;
+                    break;
+                }
+            }
         }
 
         void Update()
@@ -237,8 +253,9 @@ namespace TopDownGame {
                 loadingScreen.color = new Color(1, 1, 1, 1);
                 loadingText.color = new Color(1, 1, 1, 1);
 
-                // Temp set up; will reset scene
-                SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+                // Reaching the end will advance you to the next scene, or back to the first scene in the list if there is none
+                // This system is temp; will eventually use 0 - Title, 1 - Level Select, 2-4 - prev. to next level
+                SceneManager.LoadScene(sceneList[(currentScene + 1) % sceneList.Count]);
             }
         }
     }

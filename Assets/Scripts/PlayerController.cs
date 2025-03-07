@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
 namespace TopDownGame
 {
@@ -32,9 +33,22 @@ namespace TopDownGame
         public GameObject meleeParticles;
 
         [Header("Health UI")]
-        public Image frontHealthBar;
-        public Image leftHealthBar;
-        public Image rightHealthBar;
+        public TMP_Text rookCurHealthText;
+        public TMP_Text rookHealthMaxText;
+        public Image rookHealthBar;
+        public Image rookDarkOverlay;
+
+        public TMP_Text bishopCurHealthText;
+        public TMP_Text bishopHealthMaxText;
+        public Image bishopHealthBar;
+        public Image bishopDarkOverlay;
+
+        public TMP_Text knightCurHealthText;
+        public TMP_Text knightHealthMaxText;
+        public Image knightHealthBar;
+        public Image knightDarkOverlay;
+
+        public List<Image> darkOverlayList = new List<Image>();
 
         // Configuration
         [Header("Detection")]
@@ -110,6 +124,7 @@ namespace TopDownGame
             animator.SetInteger("SelectedCharacter", selectedCharacter);
             targetedPos = targetedPos = new Vector3(Mathf.RoundToInt(transform.position.x), Mathf.RoundToInt(transform.position.y));
             gameObject.SetActive(true);
+            updateHealthUI();
             spawnSelectableTiles();
             NodeController.instance.ReinstantiateNodePoints();
         }
@@ -263,12 +278,12 @@ namespace TopDownGame
             // Updates target icon to show eligible tiles for attack
             if (transform.position != projectileTargetTile.transform.position && Vector2.Distance(transform.position, projectileTargetTile.transform.position) <= bishopAttackRange && !attackCoroutineIsActive)
             {
-                projectileTargetTile.GetComponent<SpriteRenderer>().color = new Color(1, 1, 1, 0.2f);
+                projectileTargetTile.GetComponent<SpriteRenderer>().color = new Color(1, 1, 1, 0.5f);
                 bishopEligibleTarget = true;
             }
             else
             {
-                projectileTargetTile.GetComponent<SpriteRenderer>().color = new Color(1, 1, 1, 0.075f);
+                projectileTargetTile.GetComponent<SpriteRenderer>().color = new Color(1, 1, 1, 0.15f);
                 bishopEligibleTarget = false;
             }
 
@@ -801,6 +816,7 @@ namespace TopDownGame
 
         void selectedCharacterCycle(int dir)
         {
+            // Changes character based on who all's knocked out at the time
             // 1 = right, -1 = left
             if (knockedOutCharacters == 0)
             {
@@ -833,6 +849,11 @@ namespace TopDownGame
                 if (characterHealths[i] <= 0)
                 {
                     knockedOutCharacters++;
+                    darkOverlayList[i].color = new Color(1, 1, 1, 0.7f);
+                }
+                else
+                {
+                    darkOverlayList[i].color = new Color(1, 1, 1, 0.3f);
                 }
             }
 
@@ -863,6 +884,8 @@ namespace TopDownGame
                 {
                     gameObject.SetActive(false);
                     selectedCharacter = -1;
+                    clearExistingTiles();
+                    projectileTargetTile.SetActive(false);
                 }
 
                 // If switching to bishop, enable her target icon
@@ -876,7 +899,21 @@ namespace TopDownGame
                 }
             }
 
-            // Update UI accordingly
+            // Update health bars and highlighted icon
+            rookHealthBar.fillAmount = characterHealths[0] / characterHealthsMax[0];
+            rookCurHealthText.text = "" + characterHealths[0];
+            rookHealthMaxText.text = "" + characterHealthsMax[0];
+            bishopHealthBar.fillAmount = characterHealths[1] / characterHealthsMax[1];
+            bishopCurHealthText.text = "" + characterHealths[1];
+            bishopHealthMaxText.text = "" + characterHealthsMax[1];
+            knightHealthBar.fillAmount = characterHealths[2] / characterHealthsMax[2];
+            knightCurHealthText.text = "" + characterHealths[2];
+            knightHealthMaxText.text = "" + characterHealthsMax[2];
+
+            darkOverlayList[selectedCharacter].color = new Color(1, 1, 1, 0);
+
+
+            /*
             if (knockedOutCharacters == 0)
             {
                 frontHealthBar.fillAmount = Mathf.Ceil( characterHealths[selectedCharacter] / characterHealthsMax[selectedCharacter] * 10 ) / 10;
@@ -918,7 +955,7 @@ namespace TopDownGame
                 frontHealthBar.fillAmount = 0;
                 leftHealthBar.fillAmount = 0;
                 rightHealthBar.fillAmount = 0;
-            }
+            }*/
         }
 
         public void takeDamage(int amount)
@@ -1053,6 +1090,15 @@ namespace TopDownGame
             clearExistingTiles();
 
             StartCoroutine(ActivateActionCooldownBar(new Color(0.9f, 0.55f, 0.25f, 0.4f), actionDelay + animationTime));
+
+            if (TEMPcharSwap && prevSelectedChar != selectedCharacter)
+            {
+                prevSelectedChar = selectedCharacter;
+                GameController.instance.charSwaps++;
+                TEMPcharSwap = false;
+            }
+
+            GameController.instance.UpdatePlayerStats();
 
             if (selectedCharacter == 0)
             {

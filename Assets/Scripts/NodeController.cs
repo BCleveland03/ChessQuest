@@ -29,7 +29,6 @@ namespace TopDownGame
         private void Awake()
         {
             instance = this;
-
             nodeDetector.SetActive(false);
         }
 
@@ -79,14 +78,11 @@ namespace TopDownGame
                         {
                             nodeSprite.color = new Color(1, 1, 1, 0);
                         }
-
                         nodeGridCount++;
                     }
                 }
             }
-
             nodeDetector.SetActive(false);
-            //print(nodeIdentification.Count);
         }
     }
 }

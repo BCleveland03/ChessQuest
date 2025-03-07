@@ -29,13 +29,13 @@ namespace TopDownGame
         public Slider scrollSensSlider;
         public TMP_Text scrollSensValue;
         public GameObject invertScrollLabel;
-        public GameObject invertScrollToggle;
+        public Toggle invertScrollToggle;
         public GameObject showCooldownBarLabel;
-        public GameObject showCooldownBarToggle;
+        public Toggle showCooldownBarToggle;
 
         // State Tracking
         bool pauseAnimationCoroutineIsActive;
-        private int invertScrollCounter;
+        private int invertScrollCounter = 0;
         private int pauseState;
 
         void Awake()
@@ -57,7 +57,7 @@ namespace TopDownGame
             if (pauseState == 2)
             {
                 scrollSensValue.text = "" + scrollSensSlider.value;
-                GameController.instance.scrollSensitivity = scrollSensSlider.value;
+                GameController.instance.scrollSensitivity = (int)(scrollSensSlider.value);
             }
         }
 
@@ -97,6 +97,8 @@ namespace TopDownGame
             pauseState = -1;
             StartCoroutine(HidePauseMenu());
 
+            SaveSettingPrefs();
+
             GameController.instance.isPaused = false;
         }
 
@@ -112,11 +114,88 @@ namespace TopDownGame
             StartCoroutine(ReturnFromOptionsMenu());
         }
 
+        public void SaveSettingPrefs()
+        {
+            PlayerPrefs.SetInt("Setting_ScrollSensitivity", GameController.instance.scrollSensitivity);
+            PlayerPrefs.SetInt("Setting_InvertScroll", GameController.instance.invertScroll);
+
+            if (GameController.instance.showCooldown)
+            {
+                PlayerPrefs.SetInt("Setting_ShowCooldown", 1);
+            }
+            else
+            {
+                PlayerPrefs.SetInt("Setting_ShowCooldown", 0);
+            }
+
+            // Saves all established settings above
+            PlayerPrefs.Save();
+        }
+
+        public void LoadSettingPrefs()
+        {
+            print(PlayerPrefs.GetInt("Setting_ScrollSensitivity"));
+            print(PlayerPrefs.GetInt("Setting_InvertScroll"));
+            print(PlayerPrefs.GetInt("Setting_ShowCooldown"));
+
+            GameController.instance.scrollSensitivity = PlayerPrefs.GetInt("Setting_ScrollSensitivity", 5);
+            scrollSensSlider.value = GameController.instance.scrollSensitivity;
+            
+            //GameController.instance.invertScroll = PlayerPrefs.GetInt("Setting_ScrollSensitivity", 0);
+
+            if (PlayerPrefs.HasKey("Setting_InvertScroll"))
+            {
+                int getToggleGraphic = PlayerPrefs.GetInt("Setting_InvertScroll");
+
+                if (getToggleGraphic == 1)
+                {
+                    invertScrollToggle.isOn = true;
+                    invertScrollCounter = 1;
+                    GameController.instance.invertScroll = 1;
+                }
+                else if (getToggleGraphic == 0)
+                {
+                    invertScrollToggle.isOn = false;
+                    invertScrollCounter = 0;
+                    GameController.instance.invertScroll = 0;
+                }
+            }
+            else
+            {
+                // Default invert scroll state
+                invertScrollToggle.isOn = false;
+                invertScrollCounter = 0;
+                GameController.instance.invertScroll = 0;
+            }
+
+            if (PlayerPrefs.HasKey("Setting_ShowCooldown"))
+            {
+                int fetchedShowCooldown = PlayerPrefs.GetInt("Setting_ShowCooldown");
+
+                if (fetchedShowCooldown == 1)
+                {
+                    showCooldownBarToggle.isOn = true;
+                    GameController.instance.showCooldown = true;
+                }
+                else if (fetchedShowCooldown == 0)
+                {
+                    showCooldownBarToggle.isOn = false;
+                    GameController.instance.showCooldown = false;
+                }
+            }
+            else
+            {
+                // Default show cooldown state
+                showCooldownBarToggle.isOn = true;
+                GameController.instance.showCooldown = true;
+            }
+        }
+
         IEnumerator ShowPauseMenu()
         {
             // Returns size to default
             RectTransform pausePanelTransform = menuPanel.GetComponent<RectTransform>();
-            pausePanelTransform.sizeDelta = new Vector2(380, 450);
+            pausePanelTransform.sizeDelta = new Vector2(410, 490);
 
             // Declares coroutine activation and revokes player input
             pauseAnimationCoroutineIsActive = true;
@@ -185,9 +264,9 @@ namespace TopDownGame
             pauseContainer.SetActive(false);
 
             // Resizes panel to be larger
-            for (int i = 0; i < 31; i++)
+            for (int i = 0; i < 30; i++)
             {
-                pausePanelTransform.sizeDelta = new Vector2(380 + i * 2.4f, 450 + i * 2);
+                pausePanelTransform.sizeDelta = new Vector2(410 + i * 2.6f, 490 + i * 2.8f);
                 yield return resizeAnimationPeriod;
             }
 
@@ -207,9 +286,9 @@ namespace TopDownGame
             optionsContainer.SetActive(false);
 
             // Resizes panel to be regular size
-            for (int i = 0; i < 31; i++)
+            for (int i = 0; i < 30; i++)
             {
-                pausePanelTransform.sizeDelta = new Vector2(452 - i * 2.4f, 510 - i * 2);
+                pausePanelTransform.sizeDelta = new Vector2(488 - i * 2.6f, 574 - i * 2.4f);
                 yield return resizeAnimationPeriod;
             }
 

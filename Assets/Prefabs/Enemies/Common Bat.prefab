@@ -232,8 +232,8 @@ MonoBehaviour:
   enemyTypeID: 0
   currentHealth: 0
   currentHealthMax: 20
-  enemyDamage: 10
-  individualActionInterval: 1.5
+  enemyDamage: 8
+  individualActionInterval: 1.4
   enemyDetectionRadius: 4
   travelDirection: 0
   withinRangeToPerformAction: 0
@@ -264,7 +264,6 @@ MonoBehaviour:
   collidesWithGaps: 0
   canBeLandedOn: 0
   isFlyingLayer: 1
-  flyingInt: 0
   protectionFromLandedOn: 0
   canEnemyEvade: 0
   patrolMoveSpeed: 1.2
