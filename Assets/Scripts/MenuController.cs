@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using TMPro;
@@ -9,10 +10,18 @@ namespace TopDownGame
 {
     public class MenuController : MonoBehaviour
     {
-        // Outlets
+        [Header("Outlets")]
         public static MenuController instance;
         public Image pauseOverlay;
         public GameObject menuPanel;
+        public int pauseState = -1;
+        public bool returnToTitle = false;
+
+        [Header("User Settings")]
+        public int scrollSensitivity;
+        public int invertScroll;
+        public bool showCooldown;
+        public float sfxVolume;
 
         [Header ("Pause Menu")]
         public GameObject pauseContainer;
@@ -33,10 +42,12 @@ namespace TopDownGame
         public GameObject showCooldownBarLabel;
         public Toggle showCooldownBarToggle;
 
+        [Header("Level Completion Menu")]
+        public GameObject completionContainer;
+
         // State Tracking
         bool pauseAnimationCoroutineIsActive;
         private int invertScrollCounter = 0;
-        private int pauseState;
 
         void Awake()
         {
@@ -45,10 +56,16 @@ namespace TopDownGame
 
         void Start()
         {
-            menuPanel.SetActive(false);
-            pauseContainer.SetActive(false);
-            optionsContainer.SetActive(false);
-            pauseAnimationCoroutineIsActive = false;
+            if (SceneManager.GetActiveScene().name != "Title")
+            {
+                menuPanel.SetActive(false);
+                pauseContainer.SetActive(false);
+                optionsContainer.SetActive(false);
+                completionContainer.SetActive(false);
+                pauseAnimationCoroutineIsActive = false;
+
+                PlayerPrefs.SetString("GameState_ContinueLevel", "" + SceneManager.GetActiveScene().name);
+            }
         }
 
         void Update()
@@ -57,7 +74,7 @@ namespace TopDownGame
             if (pauseState == 2)
             {
                 scrollSensValue.text = "" + scrollSensSlider.value;
-                GameController.instance.scrollSensitivity = (int)(scrollSensSlider.value);
+                scrollSensitivity = (int)(scrollSensSlider.value);
             }
         }
 
@@ -84,8 +101,8 @@ namespace TopDownGame
             GameController.instance.previousTimeScale = Time.timeScale;
             Time.timeScale = 0;
             AudioListener.pause = true;
-            pauseState = 0;
-            StartCoroutine(ShowPauseMenu());
+            pauseState = 1;
+            StartCoroutine(ShowMenu());
 
             GameController.instance.isPaused = true;
         }
@@ -95,9 +112,7 @@ namespace TopDownGame
             Time.timeScale = GameController.instance.previousTimeScale;
             AudioListener.pause = false;
             pauseState = -1;
-            StartCoroutine(HidePauseMenu());
-
-            SaveSettingPrefs();
+            StartCoroutine(HideMenu());
 
             GameController.instance.isPaused = false;
         }
@@ -112,14 +127,55 @@ namespace TopDownGame
         {
             pauseState = 1;
             StartCoroutine(ReturnFromOptionsMenu());
+
+            SaveSettingPrefs();
+        }
+
+        public void LevelCompletion()
+        {
+            GameController.instance.previousTimeScale = Time.timeScale;
+            //Time.timeScale = 0;
+            AudioListener.pause = true;
+            pauseState = 3;
+            StartCoroutine(ShowMenu());
+
+            GameController.instance.isPaused = true;
+        }
+
+        public void ContinueToNextLevel()
+        {
+            print("Insert transition out of level.");
+            GameController.instance.InitiateFade(false, false);
+            PlayerPrefs.SetInt("LevelStat_SelectedCharacter", PlayerController.instance.selectedCharacter);
+        }
+
+        public void ReturnToTitle()
+        {
+            Time.timeScale = GameController.instance.previousTimeScale;
+            AudioListener.pause = false;
+            pauseState = -1;
+
+            // Fix this; needs to save the next scene in list for continue
+            /*if (pauseState == 3)
+            {
+                PlayerPrefs.SetString("", sceneList[(currentScene + 1) % sceneList.Count]);
+            }
+            else
+            {
+
+            }*/
+            PlayerPrefs.SetString("GameState_ContinueLevel", "" + SceneManager.GetActiveScene().name);
+            print("" + SceneManager.GetActiveScene());
+
+            GameController.instance.InitiateFade(false, true);
         }
 
         public void SaveSettingPrefs()
         {
-            PlayerPrefs.SetInt("Setting_ScrollSensitivity", GameController.instance.scrollSensitivity);
-            PlayerPrefs.SetInt("Setting_InvertScroll", GameController.instance.invertScroll);
+            PlayerPrefs.SetInt("Setting_ScrollSensitivity", scrollSensitivity);
+            PlayerPrefs.SetInt("Setting_InvertScroll", invertScroll);
 
-            if (GameController.instance.showCooldown)
+            if (showCooldown)
             {
                 PlayerPrefs.SetInt("Setting_ShowCooldown", 1);
             }
@@ -138,8 +194,8 @@ namespace TopDownGame
             print(PlayerPrefs.GetInt("Setting_InvertScroll"));
             print(PlayerPrefs.GetInt("Setting_ShowCooldown"));
 
-            GameController.instance.scrollSensitivity = PlayerPrefs.GetInt("Setting_ScrollSensitivity", 5);
-            scrollSensSlider.value = GameController.instance.scrollSensitivity;
+            scrollSensitivity = PlayerPrefs.GetInt("Setting_ScrollSensitivity", 5);
+            scrollSensSlider.value = scrollSensitivity;
             
             //GameController.instance.invertScroll = PlayerPrefs.GetInt("Setting_ScrollSensitivity", 0);
 
@@ -151,13 +207,13 @@ namespace TopDownGame
                 {
                     invertScrollToggle.isOn = true;
                     invertScrollCounter = 1;
-                    GameController.instance.invertScroll = 1;
+                    invertScroll = 1;
                 }
                 else if (getToggleGraphic == 0)
                 {
                     invertScrollToggle.isOn = false;
                     invertScrollCounter = 0;
-                    GameController.instance.invertScroll = 0;
+                    invertScroll = 0;
                 }
             }
             else
@@ -165,7 +221,7 @@ namespace TopDownGame
                 // Default invert scroll state
                 invertScrollToggle.isOn = false;
                 invertScrollCounter = 0;
-                GameController.instance.invertScroll = 0;
+                invertScroll = 0;
             }
 
             if (PlayerPrefs.HasKey("Setting_ShowCooldown"))
@@ -175,27 +231,34 @@ namespace TopDownGame
                 if (fetchedShowCooldown == 1)
                 {
                     showCooldownBarToggle.isOn = true;
-                    GameController.instance.showCooldown = true;
+                    showCooldown = true;
                 }
                 else if (fetchedShowCooldown == 0)
                 {
                     showCooldownBarToggle.isOn = false;
-                    GameController.instance.showCooldown = false;
+                    showCooldown = false;
                 }
             }
             else
             {
                 // Default show cooldown state
                 showCooldownBarToggle.isOn = true;
-                GameController.instance.showCooldown = true;
+                showCooldown = true;
             }
         }
 
-        IEnumerator ShowPauseMenu()
+        IEnumerator ShowMenu()
         {
             // Returns size to default
             RectTransform pausePanelTransform = menuPanel.GetComponent<RectTransform>();
-            pausePanelTransform.sizeDelta = new Vector2(410, 490);
+            if (pauseState == 1)
+            {
+                pausePanelTransform.sizeDelta = new Vector2(410, 490);
+            }
+            else if (pauseState == 3)
+            {
+                pausePanelTransform.sizeDelta = new Vector2(480, 520);
+            }
 
             // Declares coroutine activation and revokes player input
             pauseAnimationCoroutineIsActive = true;
@@ -216,14 +279,21 @@ namespace TopDownGame
             }
 
             menuPanel.SetActive(true);
-            pauseContainer.SetActive(true);
+            if (pauseState == 1)
+            {
+                pauseContainer.SetActive(true);
+            }
+            else if (pauseState == 3)
+            {
+                completionContainer.SetActive(true);
+            }
 
             // Declares coroutine conclusion
             pauseAnimationCoroutineIsActive = false;
             yield break;
         }
 
-        IEnumerator HidePauseMenu()
+        IEnumerator HideMenu()
         {
             // Declares coroutine activation
             pauseAnimationCoroutineIsActive = true;
@@ -301,12 +371,12 @@ namespace TopDownGame
         public void InvertScrollToggle()
         {
             invertScrollCounter++;
-            GameController.instance.invertScroll = invertScrollCounter % 2;
+            invertScroll = invertScrollCounter % 2;
         }
 
         public void ShowCooldownBarToggle()
         {
-            GameController.instance.showCooldown = !GameController.instance.showCooldown;
+            showCooldown = !showCooldown;
         }
     }
 }

@@ -152,11 +152,6 @@ namespace TopDownGame
                         for (int i = 0; i < hits.Length; i++)
                         {
                             RaycastHit2D hit = hits[i];
-                            /*Debug.Log("---------------");
-                            Debug.Log(hits.Length);
-                            Debug.Log(hit.collider.gameObject);
-                            Debug.Log("===============");*/
-
                             if (hit.collider.gameObject.layer == LayerMask.NameToLayer("Player"))
                             {
                                 // Incorporates same-tile check here since Bat can occupy same tile and remain engaged
@@ -176,8 +171,6 @@ namespace TopDownGame
 
                                     // Generate path to check for possible reach
                                     path = AStarManager.instance.GeneratePath(currentNode, AStarManager.instance.FindNearestNode(playerPos));
-                                    //targetPos = path[1].transform.position;
-
                                     if (path != null)
                                     {
                                         canTrackPlayer = true;
@@ -406,9 +399,7 @@ namespace TopDownGame
                 // Does not use pathfinding system
                 RaycastHit2D hitObstacle;
                 Vector2 batLocation = transform.position;
-                //Vector2 closestToDesiredDirection = new Vector2();
                 int readyToDeleteItemNumber = 0;
-                //float currentClosestAngle = 720f;
                 float distanceBetweenPlayerandTarget;
                 Vector2 closestTargetToPlayer = new Vector2();
                 float previousMinimumDistance;
@@ -434,37 +425,6 @@ namespace TopDownGame
                     {
                         tempBatDirections.Add(allBatDirections[i]);
                     }
-
-                    print("=========");
-                    print(tempBatDirections.Count);
-
-                    // Reorganize the list based on proximity to the desired direction of travel to reach player
-                    /*for (int i = 0; i < allBatDirections.Count; i++)
-                    {
-                        for (int j = 0; j < tempBatDirections.Count; j++)
-                        {
-                            Vector2 hypotenuseOfBatToTarget = batLocation - (batLocation + tempBatDirections[j]);
-
-                            float batRadiansTowardPlayer = Mathf.Atan2(hypotenuseOfBatToTarget.y, hypotenuseOfBatToTarget.x);
-                            float batAngleTowardPlayer = batRadiansTowardPlayer * Mathf.Rad2Deg;
-
-                            if (batAngleTowardPlayer - angleTowardPlayer + 360 < currentClosestAngle)
-                            {
-                                print(batAngleTowardPlayer - angleTowardPlayer);
-                                currentClosestAngle = batAngleTowardPlayer;
-                                closestToDesiredDirection = tempBatDirections[j];
-                                readyToDeleteItemNumber = j;
-                            }
-                        }
-
-                        reorganizedBatDirections.Add(closestToDesiredDirection);
-                        tempBatDirections.Remove(tempBatDirections[readyToDeleteItemNumber]);
-
-                        if (tempBatDirections.Count == 0)
-                        {
-                            break;
-                        }
-                    }*/
 
                     for (int i = 0; i < allBatDirections.Count; i++)
                     {
@@ -492,12 +452,6 @@ namespace TopDownGame
                         }
                     }
 
-                    /*
-                    for (int i = 0; i < reorganizedBatDirections.Count; i++)
-                    {
-                        print(reorganizedBatDirections[i]);
-                    }*/
-
                     // Go down the new list of directions based on closest direction to desired direction
                     // Goes in opposite direction (for whatever reason), reverse to create evade movement
                     for (int i = reorganizedBatDirections.Count - 1; i >= 0; i--)
@@ -514,13 +468,6 @@ namespace TopDownGame
                             StartCoroutine(MoveEnemy(engagedMoveSpeed));
                         }
                     }
-
-                    /* Movement
-                    if (availableDirections.Count > 0)
-                    {
-                        targetPos = new Vector2(Mathf.Round(transform.position.x / 2) * 2, Mathf.Round(transform.position.y / 2) * 2) + availableDirections[Random.Range(0, availableDirections.Count)];
-                        StartCoroutine(MoveEnemy(engagedMoveSpeed));
-                    }*/
                 }
             }
         }

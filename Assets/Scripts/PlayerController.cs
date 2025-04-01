@@ -119,8 +119,19 @@ namespace TopDownGame
                 characterHealths[i] = characterHealthsMax[i];
             }
 
-            currentScroll = GameController.instance.scrollSensitivity / 2;
+            selectedCharacter = PlayerPrefs.GetInt("LevelStat_SelectedCharacter", 0);
             prevSelectedChar = selectedCharacter;
+
+            if (selectedCharacter == 1)
+            {
+                projectileTargetTile.SetActive(true);
+            }
+            else
+            {
+                projectileTargetTile.SetActive(false);
+            }
+
+            currentScroll = MenuController.instance.scrollSensitivity / 2;
             animator.SetInteger("SelectedCharacter", selectedCharacter);
             targetedPos = targetedPos = new Vector3(Mathf.RoundToInt(transform.position.x), Mathf.RoundToInt(transform.position.y));
             gameObject.SetActive(true);
@@ -138,8 +149,8 @@ namespace TopDownGame
             // Scroll character swapping
             if (Input.mouseScrollDelta.y != 0 && !movementCoroutineIsActive && !attackCoroutineIsActive && !GameController.instance.isPaused)
             {
-                currentScroll = currentScroll += Input.mouseScrollDelta.y * invertScrollConversion(GameController.instance.invertScroll);
-                if (currentScroll <= -GameController.instance.scrollSensitivity)
+                currentScroll = currentScroll += Input.mouseScrollDelta.y * invertScrollConversion(MenuController.instance.invertScroll);
+                if (currentScroll <= -MenuController.instance.scrollSensitivity)
                 {
                     if (knockedOutCharacters < 2)
                     {
@@ -152,7 +163,7 @@ namespace TopDownGame
                         spawnSelectableTiles();
                     }
                 } 
-                else if (currentScroll >= GameController.instance.scrollSensitivity)
+                else if (currentScroll >= MenuController.instance.scrollSensitivity)
                 {
                     if (knockedOutCharacters < 2)
                     {
@@ -227,7 +238,7 @@ namespace TopDownGame
             spr.sprite = appearance[selectedCharacter];
 
             // Detects for a left click on a selectable tile; if true, then move character, update moves, and clear preexisting tiles
-            if(Input.GetMouseButtonDown(0) && GameController.instance.selectedTile != null)
+            if(Input.GetMouseButtonDown(0) && GameController.instance.selectedTile != null && !GameController.instance.levelEnded)
             {
                 // Activate first action bool
                 GameController.instance.firstActionMade = true;
@@ -267,46 +278,52 @@ namespace TopDownGame
                 facingDirection = 180;
             }
 
-            animator.SetInteger("DirectionFacing", facingDirection);
-
-
-
-
-            // Update target tile location to mouse pointer
-            projectileTargetTile.transform.position = new Vector2(Mathf.Round(mousePositionInWorld.x / 2) * 2, Mathf.Round(mousePositionInWorld.y / 2) * 2);
-
-            // Updates target icon to show eligible tiles for attack
-            if (transform.position != projectileTargetTile.transform.position && Vector2.Distance(transform.position, projectileTargetTile.transform.position) <= bishopAttackRange && !attackCoroutineIsActive)
+            if (!GameController.instance.levelEnded)
             {
-                projectileTargetTile.GetComponent<SpriteRenderer>().color = new Color(1, 1, 1, 0.5f);
-                bishopEligibleTarget = true;
-            }
-            else
-            {
-                projectileTargetTile.GetComponent<SpriteRenderer>().color = new Color(1, 1, 1, 0.15f);
-                bishopEligibleTarget = false;
+                animator.SetInteger("DirectionFacing", facingDirection);
             }
 
-            // Check to see if attack can be made available
-            if (Input.GetMouseButtonDown(1) && !movementCoroutineIsActive && !attackCoroutineIsActive)
+
+
+
+            if (!GameController.instance.levelEnded)
             {
-                // Activate first action bool
-                GameController.instance.firstActionMade = true;
-                
-                // Check specifically if bishop is selected, so it can then check if the target is an elegible target
-                if (selectedCharacter == 1)
+                // Update target tile location to mouse pointer
+                projectileTargetTile.transform.position = new Vector2(Mathf.Round(mousePositionInWorld.x / 2) * 2, Mathf.Round(mousePositionInWorld.y / 2) * 2);
+
+                // Updates target icon to show eligible tiles for attack
+                if (transform.position != projectileTargetTile.transform.position && Vector2.Distance(transform.position, projectileTargetTile.transform.position) <= bishopAttackRange && !attackCoroutineIsActive)
                 {
-                    // Check to make sure bishop's projectile attack doesn't land on self or target is too far from player
-                    if (bishopEligibleTarget)
+                    projectileTargetTile.GetComponent<SpriteRenderer>().color = new Color(1, 1, 1, 0.5f);
+                    bishopEligibleTarget = true;
+                }
+                else
+                {
+                    projectileTargetTile.GetComponent<SpriteRenderer>().color = new Color(1, 1, 1, 0.15f);
+                    bishopEligibleTarget = false;
+                }
+
+                // Check to see if attack can be made available
+                if (Input.GetMouseButtonDown(1) && !movementCoroutineIsActive && !attackCoroutineIsActive)
+                {
+                    // Activate first action bool
+                    GameController.instance.firstActionMade = true;
+
+                    // Check specifically if bishop is selected, so it can then check if the target is an elegible target
+                    if (selectedCharacter == 1)
+                    {
+                        // Check to make sure bishop's projectile attack doesn't land on self or target is too far from player
+                        if (bishopEligibleTarget)
+                        {
+                            StartCoroutine(PerformAttack());
+                            print("Performed attack toward " + rotationalPivot.transform.eulerAngles.z + "*");
+                        }
+                    }
+                    else
                     {
                         StartCoroutine(PerformAttack());
                         print("Performed attack toward " + rotationalPivot.transform.eulerAngles.z + "*");
                     }
-                }
-                else
-                {
-                    StartCoroutine(PerformAttack());
-                    print("Performed attack toward " + rotationalPivot.transform.eulerAngles.z + "*");
                 }
             }
 
@@ -1237,7 +1254,7 @@ namespace TopDownGame
 
         IEnumerator ActivateActionCooldownBar(Color color, float durationPeriod)
         {
-            if (GameController.instance.showCooldown)
+            if (MenuController.instance.showCooldown)
             {
                 actionCooldownBar.transform.localScale = new Vector3(0f, 1, 1);
                 actionCooldownBar.GetComponent<SpriteRenderer>().color = color;

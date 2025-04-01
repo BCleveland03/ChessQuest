@@ -14,10 +14,8 @@ namespace TopDownGame
             {
                 // Stop time and revoke control for end-of-level sequence
                 GameController.instance.levelEnded = true;
+                MenuController.instance.LevelCompletion();
                 print("Level complete!");
-                print("Insert transition out of level.");
-
-                GameController.instance.InitiateFade(false);
             }
         }
 

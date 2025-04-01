@@ -37,12 +37,6 @@ namespace TopDownGame {
         public float distanceFromEnd;
         public bool levelEnded = false;
         public int enemyDespawnDistance;
-        
-        [Header ("User Settings")]
-        public int scrollSensitivity;
-        public int invertScroll;
-        public bool showCooldown;
-        public float sfxVolume;
 
         [Header("Time and Pause State")]
         public bool firstActionMade = false;
@@ -104,7 +98,7 @@ namespace TopDownGame {
             distanceFromEnd = Mathf.Round(Vector2.Distance(PlayerController.instance.transform.position, endPoint.transform.position) * 5) / 10;
 
             // Pause toggle
-            if (Input.GetKeyDown(keyPause))
+            if (Input.GetKeyDown(keyPause) && MenuController.instance.pauseState != 3)
             {
                 MenuController.instance.TogglePause();
             }
@@ -210,9 +204,16 @@ namespace TopDownGame {
             }
         }
 
-        public void InitiateFade(bool fadeaway)
+        public void InitiateFade(bool fadeaway, bool fadeToTitle)
         {
-            StartCoroutine(FadeAwayLoadingScreen(fadeaway));
+            if (fadeToTitle)
+            {
+                StartCoroutine(ReturnToTitle());
+            }
+            else
+            {
+                StartCoroutine(FadeAwayLoadingScreen(fadeaway));
+            }
         }
 
         IEnumerator StartTimer()
@@ -231,7 +232,8 @@ namespace TopDownGame {
             
             if (fadeaway)
             {
-                for (int i = 10; i > 0; i --)
+                // Fade out // disappear
+                for (int i = 10; i > 0; i--)
                 {
                     loadingScreen.color = new Color(1, 1, 1, i / 10f);
                     loadingText.color = new Color(1, 1, 1, i / 10f);
@@ -243,6 +245,7 @@ namespace TopDownGame {
             }
             else
             {
+                // Fade in / appear
                 for (int i = 0; i < 10; i++)
                 {
                     loadingScreen.color = new Color(1, 1, 1, i / 10f);
@@ -257,6 +260,24 @@ namespace TopDownGame {
                 // This system is temp; will eventually use 0 - Title, 1 - Level Select, 2-4 - prev. to next level
                 SceneManager.LoadScene(sceneList[(currentScene + 1) % sceneList.Count]);
             }
+        }
+
+        IEnumerator ReturnToTitle()
+        {
+            WaitForSecondsRealtime fadeSpeed = new WaitForSecondsRealtime(0.025f);
+
+            // Fade in / appear
+            for (int i = 0; i < 10; i++)
+            {
+                loadingScreen.color = new Color(1, 1, 1, i / 10f);
+                loadingText.color = new Color(1, 1, 1, i / 10f);
+                yield return fadeSpeed;
+            }
+
+            loadingScreen.color = new Color(1, 1, 1, 1);
+            loadingText.color = new Color(1, 1, 1, 1);
+
+            SceneManager.LoadScene("Title");
         }
     }
 }
