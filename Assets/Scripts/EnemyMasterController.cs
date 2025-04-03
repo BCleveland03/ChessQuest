@@ -11,7 +11,7 @@ namespace TopDownGame
         //public CircleCollider2D detectionComponent;
         public GameObject healthDisplay;
         public GameObject healthDisplayBG;
-        public Transform[] actionZones;
+        //public Transform[] actionZones;
         SpriteRenderer sprite;
         CircleCollider2D circCollider;
         Animator animator;
@@ -22,7 +22,6 @@ namespace TopDownGame
         public int currentHealth;
         public int currentHealthMax;
         public int enemyDamage;
-        public float individualActionInterval;
         public float enemyDetectionRadius;
         private bool evadableState;
         public float travelDirection;
@@ -36,17 +35,20 @@ namespace TopDownGame
         [Header("Enemy AI/Behavior")]
         public List<Vector2> allSlimeDirections = new List<Vector2>();
         public List<Vector2> allBatDirections = new List<Vector2>();
+        public List<Vector2> allGuardDirections = new List<Vector2>();
         public List<Vector2> availableDirections = new List<Vector2>();
         public bool playerDetectionRadius;
         private Vector3 hypotenuseOfEnemyToPlayer;
         private float angleTowardPlayer;
         public bool detectsPlayer = false;
         public bool canTrackPlayer = false;
+        public bool eightDirectionalMovement;
 
         public enum EnemyType
         {
-            Slime,
-            Bat
+            ForestSlime,
+            CommonBat,
+            OnyxGuard
         }
         public EnemyType selectedEnemy;
 
@@ -58,7 +60,16 @@ namespace TopDownGame
         public bool protectionFromLandedOn;
         public bool canEnemyEvade;
         public float patrolMoveSpeed;
+        public float patrolActionInterval;
         public float engagedMoveSpeed;
+        public float engageActionInterval;
+        private float individualActionInterval;
+
+        // For guard's idle animations
+        [SerializeField]
+        private int idleCounter = 3;
+        [SerializeField]
+        private int maskFlipBlocker = 1;
 
         [Header("Node Info")]
         public Node previousNode;
@@ -98,13 +109,13 @@ namespace TopDownGame
             animator.SetFloat("DirectionAngle", 180);
 
             currentState = StateMachine.Patrol;
-            StartCoroutine(InitiateEnemy(individualActionInterval));
+            StartCoroutine(InitiateEnemy(patrolActionInterval));
         }
 
         IEnumerator InitiateEnemy(float interval)
         {
             // Waits until global timer is aligned with enemy's personal movement time interval
-            while (!GameController.instance.IsThisInteger(GameController.instance.globalTimer / individualActionInterval))
+            while (!GameController.instance.IsThisInteger(GameController.instance.globalTimer / patrolActionInterval))
             {
                 yield return null;
             }
@@ -120,6 +131,15 @@ namespace TopDownGame
             if (path != null)
             {
                 path.Clear();
+            }
+
+            if (currentState == StateMachine.Patrol)
+            {
+                individualActionInterval = patrolActionInterval;
+            }
+            else if (currentState == StateMachine.Engage)
+            {
+                individualActionInterval = engageActionInterval;
             }
 
             // Action occurs once every specified interval
@@ -155,7 +175,7 @@ namespace TopDownGame
                             if (hit.collider.gameObject.layer == LayerMask.NameToLayer("Player"))
                             {
                                 // Incorporates same-tile check here since Bat can occupy same tile and remain engaged
-                                if (selectedEnemy == EnemyType.Slime && Vector2.Distance(transform.position, playerPos) > 0.1f)
+                                if ((selectedEnemy == EnemyType.ForestSlime || selectedEnemy == EnemyType.OnyxGuard) && Vector2.Distance(transform.position, playerPos) > 0.1f)
                                 {
                                     // Active node update
                                     GameObject[] allObjects = GameObject.FindGameObjectsWithTag("NodePoint");
@@ -170,7 +190,20 @@ namespace TopDownGame
                                     }
 
                                     // Generate path to check for possible reach
-                                    path = AStarManager.instance.GeneratePath(currentNode, AStarManager.instance.FindNearestNode(playerPos));
+                                    /* If enemy has eightDirectionalMovement enabled, the enemy will use the eight direction node connection list;
+                                     * otherwise will use four direction node connection list
+                                     */
+                                    path = AStarManager.instance.GeneratePath(currentNode, AStarManager.instance.FindNearestNode(playerPos), eightDirectionalMovement);
+
+                                    /*if (eightDirectionalMovement)
+                                    {
+                                        path = AStarManager.instance.GeneratePath(currentNode, AStarManager.instance.FindNearestNode(playerPos), true);
+                                    }
+                                    else
+                                    {
+                                        path = AStarManager.instance.GeneratePath(currentNode, AStarManager.instance.FindNearestNode(playerPos), false);
+                                    }*/
+
                                     if (path != null)
                                     {
                                         canTrackPlayer = true;
@@ -183,7 +216,7 @@ namespace TopDownGame
 
                                     break;
                                 }
-                                else if (selectedEnemy == EnemyType.Bat)
+                                else if (selectedEnemy == EnemyType.CommonBat)
                                 {
                                     canTrackPlayer = true;
                                     break;
@@ -204,19 +237,20 @@ namespace TopDownGame
 
 
                     // Update state
-                    if (!canTrackPlayer && currentState != StateMachine.Patrol && currentHealth > (currentHealthMax * 10) / 100)
+                    // Evade won't be included in show build
+                    if (!canTrackPlayer && currentState != StateMachine.Patrol && currentHealth > 1)//(currentHealthMax * 10) / 100)
                     {
                         currentState = StateMachine.Patrol;
                         //path.Clear();
                         print("Patrolling");
                     }
-                    else if (canTrackPlayer && currentState != StateMachine.Engage && currentHealth > (currentHealthMax * 10) / 100)
+                    else if (canTrackPlayer && currentState != StateMachine.Engage && currentHealth > 1)//(currentHealthMax * 10) / 100)
                     {
                         currentState = StateMachine.Engage;
                         //path.Clear();
                         print("Engaged");
                     }
-                    else if (currentState != StateMachine.Evade && currentHealth <= (currentHealthMax * 10) / 100)
+                    else if (currentState != StateMachine.Evade && currentHealth <= 1)//(currentHealthMax * 10) / 100)
                     {
                         currentState = StateMachine.Evade;
                         //path.Clear();
@@ -330,14 +364,43 @@ namespace TopDownGame
             // Movement
             if (availableDirections.Count > 0)
             {
-                targetPos = new Vector2(Mathf.Round(transform.position.x / 2) * 2, Mathf.Round(transform.position.y / 2) * 2) + availableDirections[Random.Range(0, availableDirections.Count)];
-                StartCoroutine(MoveEnemy(patrolMoveSpeed));
+                // Random idle actions
+                if (selectedEnemy == EnemyType.OnyxGuard)
+                {
+                    // 1 in 3/4/5/... chance of idleing
+                    if (Random.Range(1, idleCounter) == 1)
+                    {
+                        print(idleCounter);
+                        idleCounter++;
+
+                        if (Random.Range(maskFlipBlocker, 4) == 1)
+                        {
+                            print("Mask flip");
+                            animator.SetTrigger("MaskFlip");
+                            maskFlipBlocker = 2;
+                        }              
+                    }
+                    else
+                    {
+                        // Reset counters
+                        idleCounter = 3;
+                        maskFlipBlocker = 1;
+
+                        targetPos = new Vector2(Mathf.Round(transform.position.x / 2) * 2, Mathf.Round(transform.position.y / 2) * 2) + availableDirections[Random.Range(0, availableDirections.Count)];
+                        StartCoroutine(MoveEnemy(patrolMoveSpeed));
+                    }
+                }
+                else
+                {
+                    targetPos = new Vector2(Mathf.Round(transform.position.x / 2) * 2, Mathf.Round(transform.position.y / 2) * 2) + availableDirections[Random.Range(0, availableDirections.Count)];
+                    StartCoroutine(MoveEnemy(patrolMoveSpeed));
+                }
             }
         }
 
         void Engage()
         {
-            if (selectedEnemy == EnemyType.Slime)
+            if (selectedEnemy == EnemyType.ForestSlime || selectedEnemy == EnemyType.OnyxGuard)
             {
                 // Slime AI pathing
                 targetPos = path[1].transform.position;
@@ -393,7 +456,7 @@ namespace TopDownGame
                     StartCoroutine(MoveEnemy(engagedMoveSpeed));
                 }
             }
-            else if (selectedEnemy == EnemyType.Bat)
+            else if (selectedEnemy == EnemyType.CommonBat)
             {
                 // Bat pathing, similar to patrol movement, but direction is targeted
                 // Does not use pathfinding system
@@ -476,7 +539,7 @@ namespace TopDownGame
         {
             /*if (path.Count == 0)
             {
-                path = AStarManager.instance.GeneratePath(currentNode, AStarManager.instance.FindFurthestNode(playerPos));
+                path = AStarManager.instance.GeneratePath(currentNode, AStarManager.instance.FindFurthestNode(playerPos), false);
             }*/
         }
 
@@ -505,13 +568,17 @@ namespace TopDownGame
             availableDirections.Clear();
 
             // Direction determination based on which enemy is which
-            if (selectedEnemy == EnemyType.Slime)
+            if (selectedEnemy == EnemyType.ForestSlime)
             {
                 specifiedEnemyTypeDirections = allSlimeDirections;
             }
-            else if (selectedEnemy == EnemyType.Bat)
+            else if (selectedEnemy == EnemyType.CommonBat)
             {
                 specifiedEnemyTypeDirections = allBatDirections;
+            }
+            else if (selectedEnemy == EnemyType.OnyxGuard)
+            {
+                specifiedEnemyTypeDirections = allGuardDirections;
             }
 
             // Establishing available directions based on enemy type

@@ -9,7 +9,8 @@ namespace TopDownGame
         //Outlets
         public Node cameFrom;
         /* Needs to be public List<Node> connections */
-        public List<Node> connections;
+        public List<Node> fourDirectionConnections;
+        public List<Node> eightDirectionConnections;
 
         // State Tracking
         public int nameToInt;
@@ -41,27 +42,59 @@ namespace TopDownGame
             // North adjacent node check
             if (NodeController.instance.nodeIdentification.ContainsKey(nameToInt - 100))
             {
-                /* Need to convert from a GameObject so that these can be put into the List */
-                //connections.Add(NodeController.instance.transform.Find("" + (nameToInt - 100)).gameObject);
-                connections.Add(NodeController.instance.transform.Find("" + (nameToInt - 100)).GetComponent<Node>());
+                fourDirectionConnections.Add(NodeController.instance.transform.Find("" + (nameToInt - 100)).GetComponent<Node>());
+                eightDirectionConnections.Add(NodeController.instance.transform.Find("" + (nameToInt - 100)).GetComponent<Node>());
             }
+
+            // Northeast adjacent node check (8-dir only)
+            if (NodeController.instance.nodeIdentification.ContainsKey(nameToInt - 99))
+            {
+                eightDirectionConnections.Add(NodeController.instance.transform.Find("" + (nameToInt - 99)).GetComponent<Node>());
+            }
+
+
 
             // East adjacent node check
             if (NodeController.instance.nodeIdentification.ContainsKey(nameToInt + 1))
             {
-                connections.Add(NodeController.instance.transform.Find("" + (nameToInt + 1)).GetComponent<Node>());
+                fourDirectionConnections.Add(NodeController.instance.transform.Find("" + (nameToInt + 1)).GetComponent<Node>());
+                eightDirectionConnections.Add(NodeController.instance.transform.Find("" + (nameToInt + 1)).GetComponent<Node>());
             }
+
+            // Southeast adjacent node check (8-dir only)
+            if (NodeController.instance.nodeIdentification.ContainsKey(nameToInt + 101))
+            {
+                eightDirectionConnections.Add(NodeController.instance.transform.Find("" + (nameToInt + 101)).GetComponent<Node>());
+            }
+
+
 
             // South adjacent node check
             if (NodeController.instance.nodeIdentification.ContainsKey(nameToInt + 100))
             {
-                connections.Add(NodeController.instance.transform.Find("" + (nameToInt + 100)).GetComponent<Node>());
+                fourDirectionConnections.Add(NodeController.instance.transform.Find("" + (nameToInt + 100)).GetComponent<Node>());
+                eightDirectionConnections.Add(NodeController.instance.transform.Find("" + (nameToInt + 100)).GetComponent<Node>());
             }
+
+            // Southwest adjacent node check
+            if (NodeController.instance.nodeIdentification.ContainsKey(nameToInt + 99))
+            {
+                eightDirectionConnections.Add(NodeController.instance.transform.Find("" + (nameToInt + 99)).GetComponent<Node>());
+            }
+
+
 
             // West adjacent node check
             if (NodeController.instance.nodeIdentification.ContainsKey(nameToInt - 1))
             {
-                connections.Add(NodeController.instance.transform.Find("" + (nameToInt - 1)).GetComponent<Node>());
+                fourDirectionConnections.Add(NodeController.instance.transform.Find("" + (nameToInt - 1)).GetComponent<Node>());
+                eightDirectionConnections.Add(NodeController.instance.transform.Find("" + (nameToInt - 1)).GetComponent<Node>());
+            }
+
+            // Northwest adjacent node check
+            if (NodeController.instance.nodeIdentification.ContainsKey(nameToInt - 101))
+            {
+                eightDirectionConnections.Add(NodeController.instance.transform.Find("" + (nameToInt - 101)).GetComponent<Node>());
             }
 
             yield break;
@@ -74,13 +107,20 @@ namespace TopDownGame
 
         private void OnDrawGizmos()
         {
-            Gizmos.color = Color.blue;
-
-            if (connections.Count > 0)
+            if (fourDirectionConnections.Count > 0)
             {
-                for (int i = 0; i < connections.Count; i++)
+                Gizmos.color = Color.yellow;
+
+                for (int i = 0; i < eightDirectionConnections.Count; i++)
                 {
-                    Gizmos.DrawLine(transform.position, connections[i].transform.position);
+                    Gizmos.DrawLine(transform.position, eightDirectionConnections[i].transform.position);
+                }
+
+                Gizmos.color = Color.blue;
+
+                for (int i = 0; i < fourDirectionConnections.Count; i++)
+                {
+                    Gizmos.DrawLine(transform.position, fourDirectionConnections[i].transform.position);
                 }
             }
         }

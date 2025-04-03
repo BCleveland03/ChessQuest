@@ -15,7 +15,7 @@ namespace TopDownGame
             instance = this;
         }
 
-        public List<Node> GeneratePath(Node start, Node end)
+        public List<Node> GeneratePath(Node start, Node end, bool eightDir)
         {
             List<Node> openSet = new List<Node>();
 
@@ -59,19 +59,41 @@ namespace TopDownGame
                     return path;
                 }
 
-                foreach (Node connectedNode in currentNode.connections)
+                if (eightDir)
                 {
-                    float heldGScore = currentNode.gScore + Vector2.Distance(currentNode.transform.position, connectedNode.transform.position);
-
-                    if (heldGScore < connectedNode.gScore)
+                    foreach (Node connectedNode in currentNode.eightDirectionConnections)
                     {
-                        connectedNode.cameFrom = currentNode;
-                        connectedNode.gScore = heldGScore;
-                        connectedNode.hScore = Vector2.Distance(connectedNode.transform.position, end.transform.position);
+                        float heldGScore = currentNode.gScore + Vector2.Distance(currentNode.transform.position, connectedNode.transform.position);
 
-                        if (!openSet.Contains(connectedNode))
+                        if (heldGScore < connectedNode.gScore)
                         {
-                            openSet.Add(connectedNode);
+                            connectedNode.cameFrom = currentNode;
+                            connectedNode.gScore = heldGScore;
+                            connectedNode.hScore = Vector2.Distance(connectedNode.transform.position, end.transform.position);
+
+                            if (!openSet.Contains(connectedNode))
+                            {
+                                openSet.Add(connectedNode);
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    foreach (Node connectedNode in currentNode.fourDirectionConnections)
+                    {
+                        float heldGScore = currentNode.gScore + Vector2.Distance(currentNode.transform.position, connectedNode.transform.position);
+
+                        if (heldGScore < connectedNode.gScore)
+                        {
+                            connectedNode.cameFrom = currentNode;
+                            connectedNode.gScore = heldGScore;
+                            connectedNode.hScore = Vector2.Distance(connectedNode.transform.position, end.transform.position);
+
+                            if (!openSet.Contains(connectedNode))
+                            {
+                                openSet.Add(connectedNode);
+                            }
                         }
                     }
                 }

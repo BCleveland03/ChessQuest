@@ -307,16 +307,10 @@ MonoBehaviour:
   playerPos: {x: 0, y: 0}
   healthDisplay: {fileID: 4059443453925078418}
   healthDisplayBG: {fileID: 4086819124343656338}
-  actionZones:
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
-  - {fileID: 0}
   enemyTypeID: 0
   currentHealth: 0
   currentHealthMax: 30
   enemyDamage: 10
-  individualActionInterval: 1.8
   enemyDetectionRadius: 3
   travelDirection: 0
   withinRangeToPerformAction: 0
@@ -335,6 +329,15 @@ MonoBehaviour:
   - {x: -4, y: -2}
   - {x: -4, y: 2}
   - {x: -2, y: 4}
+  allGuardDirections:
+  - {x: 0, y: 2}
+  - {x: 2, y: 2}
+  - {x: 2, y: 0}
+  - {x: 2, y: -2}
+  - {x: 0, y: -2}
+  - {x: -2, y: -2}
+  - {x: -2, y: 0}
+  - {x: -2, y: 2}
   availableDirections:
   - {x: 0, y: 0}
   - {x: 0, y: 0}
@@ -343,6 +346,7 @@ MonoBehaviour:
   playerDetectionRadius: 0
   detectsPlayer: 0
   canTrackPlayer: 0
+  eightDirectionalMovement: 0
   selectedEnemy: 0
   collidesWithGaps: 1
   canBeLandedOn: 1
@@ -350,7 +354,9 @@ MonoBehaviour:
   protectionFromLandedOn: 0
   canEnemyEvade: 0
   patrolMoveSpeed: 1
+  patrolActionInterval: 1.6
   engagedMoveSpeed: 1.1
+  engageActionInterval: 1.5
   previousNode: {fileID: 0}
   currentNode: {fileID: 0}
   path: []
@@ -367,7 +373,7 @@ MonoBehaviour:
     m_Bits: 192
   wallMask:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 64
   playerAndShieldMask:
     serializedVersion: 2
     m_Bits: 1032

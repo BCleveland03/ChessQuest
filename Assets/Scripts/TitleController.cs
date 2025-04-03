@@ -18,6 +18,8 @@ namespace TopDownGame
         public Grid foregroundGrid;
         public Grid midgroundGrid;
         public Grid backgroundGrid;
+        public Grid skyGrid;
+        public Transform skyBG;
 
         public Image loadingScreen;
         public TMP_Text loadingText;
@@ -26,6 +28,8 @@ namespace TopDownGame
         private float foregroundSpeed;
         private float midgroundSpeed;
         private float backgroundSpeed;
+        private float forestMtnSpeed;
+        private float skySpeed;
 
         private float modifier = 1.2f;
         
@@ -37,6 +41,7 @@ namespace TopDownGame
             foregroundSpeed = 0;
             midgroundSpeed = 0;
             backgroundSpeed = 0;
+            skySpeed = 0;
 
             StartCoroutine(SpeedIncrease());
             StartCoroutine(BackgroundScroll());
@@ -120,8 +125,10 @@ namespace TopDownGame
             while (foregroundSpeed < 0.02)
             {
                 foregroundSpeed += 0.0005f;
-                midgroundSpeed += 0.000375f;
-                backgroundSpeed += 0.00025f;
+                midgroundSpeed += 0.0004f;
+                backgroundSpeed += 0.000275f;
+                forestMtnSpeed += 0.000125f;
+                skySpeed += 0.00005f;
                 yield return speedIncreaseDelay;
             }
         }
@@ -146,6 +153,14 @@ namespace TopDownGame
                 if (backgroundGrid.transform.position.x <= -139.25f)
                 {
                     backgroundGrid.transform.position = new Vector3(backgroundGrid.transform.position.x + 139.25f, 0.75f, 0);
+                }
+
+                skyGrid.transform.position -= new Vector3(forestMtnSpeed * modifier, 0, 0);
+                skyBG.transform.position -= new Vector3(skySpeed * modifier, 0, 0) * Time.deltaTime;
+                if (skyGrid.transform.position.x <= -48)
+                {
+                    skyGrid.transform.position = new Vector3(skyGrid.transform.position.x + 48f, -0.2f, 0);
+                    skyBG.transform.position = new Vector3(skyBG.transform.position.x + 48f, -13.5f, 0);
                 }
 
                 yield return null;

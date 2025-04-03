@@ -153,20 +153,28 @@ namespace TopDownGame
         {
             Time.timeScale = GameController.instance.previousTimeScale;
             AudioListener.pause = false;
-            pauseState = -1;
 
             // Fix this; needs to save the next scene in list for continue
-            /*if (pauseState == 3)
+            if (pauseState == 3)
             {
-                PlayerPrefs.SetString("", sceneList[(currentScene + 1) % sceneList.Count]);
+                if(GameController.instance.sceneList[(GameController.instance.currentScene + 1) % GameController.instance.sceneList.Count] == "Title")
+                {
+                    PlayerPrefs.SetString("GameState_ContinueLevel", "LevelT-1");
+                    print("Scene Name: LevelT-1");
+                }
+                else
+                {
+                    PlayerPrefs.SetString("GameState_ContinueLevel", "" + GameController.instance.sceneList[(GameController.instance.currentScene + 1) % GameController.instance.sceneList.Count]);
+                    print("Scene Name: " + GameController.instance.sceneList[(GameController.instance.currentScene + 1) % GameController.instance.sceneList.Count]);
+                }
             }
             else
             {
+                PlayerPrefs.SetString("GameState_ContinueLevel", "" + SceneManager.GetActiveScene().name);
+            }
+            //print("" + SceneManager.GetActiveScene());
 
-            }*/
-            PlayerPrefs.SetString("GameState_ContinueLevel", "" + SceneManager.GetActiveScene().name);
-            print("" + SceneManager.GetActiveScene());
-
+            pauseState = -1;
             GameController.instance.InitiateFade(false, true);
         }
 
