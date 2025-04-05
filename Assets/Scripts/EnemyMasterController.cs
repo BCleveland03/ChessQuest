@@ -11,6 +11,7 @@ namespace TopDownGame
         //public CircleCollider2D detectionComponent;
         public GameObject healthDisplay;
         public GameObject healthDisplayBG;
+        public GameObject starSwirl;
         //public Transform[] actionZones;
         SpriteRenderer sprite;
         CircleCollider2D circCollider;
@@ -100,9 +101,9 @@ namespace TopDownGame
         // Methods
         private void Start()
         {
-            sprite = GetComponent<SpriteRenderer>();
+            sprite = GetComponentInChildren<SpriteRenderer>();
             circCollider = GetComponent<CircleCollider2D>();
-            animator = GetComponent<Animator>();
+            animator = GetComponentInChildren<Animator>();
 
             currentHealth = currentHealthMax;
             animator.SetInteger("Health", currentHealth);
@@ -625,7 +626,7 @@ namespace TopDownGame
                     yield return null;
                 }
 
-                transform.position = targetPos;
+                //transform.position = targetPos;
                 animator.SetBool("IsMoving", false);
             }
             else
@@ -655,7 +656,16 @@ namespace TopDownGame
             gameObject.layer = 0;
             healthDisplayBG.SetActive(false);
             circCollider.enabled = false;
-            
+
+            if (selectedEnemy == EnemyType.OnyxGuard)
+            {
+                for (float i = 0f; i < 1f; i += 0.05f)
+                {
+                    starSwirl.GetComponent<SpriteRenderer>().color = new Color(1, 1, 1, i);
+                    yield return fadeAway;
+                }
+            }
+
             while (Vector2.Distance(transform.position, PlayerController.instance.transform.position)
                 < GameController.instance.enemyDespawnDistance)
             {

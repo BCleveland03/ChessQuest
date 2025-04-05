@@ -1089,6 +1089,7 @@ namespace TopDownGame
             Vector2 tempEndPos;
             RaycastHit2D hitDetect;
             Collider2D[] hits;
+            bool breakLoops = false;
 
             Vector2 noDirNecessary = transform.TransformDirection(new Vector2(0, 0));
 
@@ -1123,7 +1124,70 @@ namespace TopDownGame
                 rookShielded = true;
                 animator.SetBool("IsAttacking", true);
 
-                for (int i = -1; i < 2; i++)
+                // Check the tile you occupy
+                hitDetect = Physics2D.Linecast(transform.position, transform.position, wallMask);
+                Debug.DrawLine(transform.position, transform.position, Color.yellow, 0.5f);
+
+                // If no wall is detected in this spot, then check that spot again specifically for enemies using its coordinates
+                if (hitDetect.collider == null)
+                {
+                    // Enemy check
+                    hits = Physics2D.OverlapCircleAll(transform.position, 0.9f, enemyMask);
+
+                    // Handle each hit target in that spot, should there be more than one
+                    foreach (Collider2D hit in hits)
+                    {
+                        EnemyMasterController enemy = hit.GetComponent<EnemyMasterController>();
+
+                        if (enemy)
+                        {
+                            enemy.EnemyTakeDamage("main", 1);
+                        }
+                    }
+
+                    // Check the tiles in front of you
+                    for (int i = -1; i < 2; i++)
+                    {
+                        // First check for wall: converts angs to rads for Vector2 dir, gets avg of Vector2 vals to then be used for distance
+                        tempHitDir = new Vector2(Mathf.Cos(-i * Mathf.PI / 4 + facingDirection * Mathf.Deg2Rad), Mathf.Sin(-i * Mathf.PI / 4 + facingDirection * Mathf.Deg2Rad));
+                        tempEndPos = new Vector2(Mathf.Round(tempHitDir.x) * 2 + transform.position.x, Mathf.Round(tempHitDir.y) * 2 + transform.position.y);
+
+                        hitDetect = Physics2D.Linecast(transform.position, tempEndPos, wallMask);
+                        Debug.DrawLine(transform.position, tempEndPos, Color.yellow, 0.5f);
+
+                        // If no wall is detected in this spot, then check that spot again specifically for enemies using its coordinates
+                        if (hitDetect.collider == null)
+                        {
+                            // Enemy check
+                            hits = Physics2D.OverlapCircleAll(tempEndPos, 0.9f, enemyMask);
+
+                            // Handle each hit target in that spot, should there be more than one
+                            foreach (Collider2D hit in hits)
+                            {
+                                EnemyMasterController enemy = hit.GetComponent<EnemyMasterController>();
+                                DestructableObject destructableObj = hit.GetComponent<DestructableObject>();
+
+                                if (enemy)
+                                {
+                                    enemy.EnemyTakeDamage("main", 1);
+                                }
+                                else if (destructableObj)
+                                {
+                                    destructableObj.DamageObject();
+                                    breakLoops = true;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (breakLoops)
+                        {
+                            break;
+                        }
+                    }
+                }
+
+                /*for (int i = -1; i < 2; i++)
                 {
                     // First check for wall: converts angs to rads for Vector2 dir, gets avg of Vector2 vals to then be used for distance
                     tempHitDir = new Vector2(Mathf.Cos(-i * Mathf.PI / 4 + facingDirection * Mathf.Deg2Rad), Mathf.Sin(-i * Mathf.PI / 4 + facingDirection * Mathf.Deg2Rad));
@@ -1149,7 +1213,7 @@ namespace TopDownGame
                             }
                         }
                     }
-                }
+                }*/
             }
             else if (selectedCharacter == 1)
             {
@@ -1167,21 +1231,13 @@ namespace TopDownGame
             {
                 animator.SetBool("IsAttacking", true);
 
-                // First check for wall: converts dir to rads for Vector2 dir, converts rad to extend the full 2 units
-                tempHitDir = new Vector2(Mathf.Cos(facingDirection * Mathf.Deg2Rad), Mathf.Sin(facingDirection * Mathf.Deg2Rad));
-                tempEndPos = new Vector2(Mathf.Round(tempHitDir.x) * 2 + transform.position.x, Mathf.Round(tempHitDir.y) * 2 + transform.position.y);
+                hitDetect = Physics2D.Linecast(transform.position, transform.position, wallMask);
+                Debug.DrawLine(transform.position, transform.position, Color.yellow, 0.5f);
 
-                hitDetect = Physics2D.Linecast(transform.position, tempEndPos, wallMask);
-                Debug.DrawLine(transform.position, tempEndPos, Color.yellow, 0.5f);
-
-                // If no wall is detected in this spot, then check that spot again specifically for enemies using its coordinates
                 if (hitDetect.collider == null)
                 {
-                    // Spawn the slash particle
-                    SpawnParticle(facingDirection);
-                    
                     // Enemy check on this tile
-                    hits = Physics2D.OverlapCircleAll(tempEndPos, 0.9f, enemyMask);
+                    hits = Physics2D.OverlapCircleAll(transform.position, 0.9f, enemyMask);
 
                     // Handle each hit target in that spot, should there be more than one
                     foreach (Collider2D hit in hits)
@@ -1194,15 +1250,19 @@ namespace TopDownGame
                         }
                     }
 
-                    // Cast to the next tile
-                    tempEndPos = new Vector2(Mathf.Round(tempHitDir.x) * 2 + tempEndPos.x, Mathf.Round(tempHitDir.y) * 2 + tempEndPos.y);
+                    // First check for wall: converts dir to rads for Vector2 dir, converts rad to extend the full 2 units
+                    tempHitDir = new Vector2(Mathf.Cos(facingDirection * Mathf.Deg2Rad), Mathf.Sin(facingDirection * Mathf.Deg2Rad));
+                    tempEndPos = new Vector2(Mathf.Round(tempHitDir.x) * 2 + transform.position.x, Mathf.Round(tempHitDir.y) * 2 + transform.position.y);
 
                     hitDetect = Physics2D.Linecast(transform.position, tempEndPos, wallMask);
                     Debug.DrawLine(transform.position, tempEndPos, Color.yellow, 0.5f);
 
-                    // If no wall is detected in this second spot, then check that spot again specifically for enemies using its coordinates
+                    // If no wall is detected in this spot, then check that spot again specifically for enemies using its coordinates
                     if (hitDetect.collider == null)
                     {
+                        // Spawn the slash particle
+                        SpawnParticle(facingDirection);
+
                         // Enemy check on this tile
                         hits = Physics2D.OverlapCircleAll(tempEndPos, 0.9f, enemyMask);
 
@@ -1210,10 +1270,45 @@ namespace TopDownGame
                         foreach (Collider2D hit in hits)
                         {
                             EnemyMasterController enemy = hit.GetComponent<EnemyMasterController>();
+                            DestructableObject destructableObj = hit.GetComponent<DestructableObject>();
 
                             if (enemy)
                             {
                                 enemy.EnemyTakeDamage("main", 1);
+                            }
+                            else if (destructableObj)
+                            {
+                                destructableObj.DamageObject();
+                                breakLoops = true;
+                            }
+                        }
+
+                        // Cast to the next tile
+                        tempEndPos = new Vector2(Mathf.Round(tempHitDir.x) * 2 + tempEndPos.x, Mathf.Round(tempHitDir.y) * 2 + tempEndPos.y);
+
+                        hitDetect = Physics2D.Linecast(transform.position, tempEndPos, wallMask);
+                        Debug.DrawLine(transform.position, tempEndPos, Color.yellow, 0.5f);
+
+                        // If no wall is detected in this second spot, then check that spot again specifically for enemies using its coordinates
+                        if (hitDetect.collider == null && !breakLoops)
+                        {
+                            // Enemy check on this tile
+                            hits = Physics2D.OverlapCircleAll(tempEndPos, 0.9f, enemyMask);
+
+                            // Handle each hit target in that spot, should there be more than one
+                            foreach (Collider2D hit in hits)
+                            {
+                                EnemyMasterController enemy = hit.GetComponent<EnemyMasterController>();
+                                DestructableObject destructableObj = hit.GetComponent<DestructableObject>();
+
+                                if (enemy)
+                                {
+                                    enemy.EnemyTakeDamage("main", 1);
+                                }
+                                else if (destructableObj)
+                                {
+                                    destructableObj.DamageObject();
+                                }
                             }
                         }
                     }

@@ -68,10 +68,17 @@ namespace TopDownGame
                     {
                         //Collider2D hit = Physics2D.OverlapCircle(transform.position, 0.75f, enemyMask);
                         //print("Dealt damage to enemy");
-                        print(collisions[i].gameObject.name);
+                        //print(collisions[i].gameObject.name);
 
                         EnemyMasterController enemy = collisions[i].GetComponent<EnemyMasterController>();
                         enemy.EnemyTakeDamage("main", 1); // collisions.Length);
+                    }
+                    
+                    if (collisions[i].gameObject.layer == LayerMask.NameToLayer("Destructable"))
+                    {
+                        DestructableObject destructableObj = collisions[i].GetComponent<DestructableObject>();
+                        destructableObj.DamageObject();
+                        break;
                     }
                 }
                 //print(collisions.Length);

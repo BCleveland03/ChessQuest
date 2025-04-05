@@ -8,6 +8,7 @@ TagManager:
   - Wall
   - NodePoint
   - Hitbox
+  - Destructable
   layers:
   - Default
   - TransparentFX
@@ -23,8 +24,8 @@ TagManager:
   - PlayerProjectile
   - EnemyProjectile
   - PlayerParticle
-  - 
-  - 
+  - EnemyParticle
+  - Destructable
   - 
   - 
   - 

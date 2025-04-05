@@ -68,7 +68,7 @@ MonoBehaviour:
   totalMoves: 0
   distanceFromEnd: 0
   levelEnded: 0
-  enemyDespawnDistance: 10
+  enemyDespawnDistance: 12
   firstActionMade: 0
   globalTimer: 0
   previousTimeScale: 1

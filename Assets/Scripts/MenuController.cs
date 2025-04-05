@@ -198,9 +198,9 @@ namespace TopDownGame
 
         public void LoadSettingPrefs()
         {
-            print(PlayerPrefs.GetInt("Setting_ScrollSensitivity"));
+            /*print(PlayerPrefs.GetInt("Setting_ScrollSensitivity"));
             print(PlayerPrefs.GetInt("Setting_InvertScroll"));
-            print(PlayerPrefs.GetInt("Setting_ShowCooldown"));
+            print(PlayerPrefs.GetInt("Setting_ShowCooldown"));*/
 
             scrollSensitivity = PlayerPrefs.GetInt("Setting_ScrollSensitivity", 5);
             scrollSensSlider.value = scrollSensitivity;

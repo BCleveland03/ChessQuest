@@ -31,7 +31,7 @@ namespace TopDownGame
         private float forestMtnSpeed;
         private float skySpeed;
 
-        private float modifier = 1.2f;
+        private float modifier = 5f;
         
         // Start is called before the first frame update
         void Start()
@@ -44,7 +44,7 @@ namespace TopDownGame
             skySpeed = 0;
 
             StartCoroutine(SpeedIncrease());
-            StartCoroutine(BackgroundScroll());
+            //StartCoroutine(BackgroundScroll());
             StartCoroutine(ButtonsDelay());
 
             print(PlayerPrefs.GetString("GameState_ContinueLevel"));
@@ -57,6 +57,35 @@ namespace TopDownGame
             {
                 foregroundSpeed += 0.00001f;
             }*/
+        }
+
+        void FixedUpdate()
+        {
+            foregroundGrid.transform.position -= new Vector3(foregroundSpeed * modifier, 0, 0);
+            if (foregroundGrid.transform.position.x <= -132)
+            {
+                foregroundGrid.transform.position = new Vector3(foregroundGrid.transform.position.x + 132, 0, 0);
+            }
+
+            midgroundGrid.transform.position -= new Vector3(midgroundSpeed * modifier, 0, 0);
+            if (midgroundGrid.transform.position.x <= -149.5f)
+            {
+                midgroundGrid.transform.position = new Vector3(midgroundGrid.transform.position.x + 149.5f, 0.5f, 0);
+            }
+
+            backgroundGrid.transform.position -= new Vector3(backgroundSpeed * modifier, 0, 0);
+            if (backgroundGrid.transform.position.x <= -139.25f)
+            {
+                backgroundGrid.transform.position = new Vector3(backgroundGrid.transform.position.x + 139.25f, 0.75f, 0);
+            }
+
+            skyGrid.transform.position -= new Vector3(forestMtnSpeed * modifier, 0, 0);
+            skyBG.transform.position -= new Vector3(skySpeed * modifier, 0, 0) * Time.deltaTime;
+            if (skyGrid.transform.position.x <= -48)
+            {
+                skyGrid.transform.position = new Vector3(skyGrid.transform.position.x + 48f, -0.2f, 0);
+                skyBG.transform.position = new Vector3(skyBG.transform.position.x + 48f, -13.5f, 0);
+            }
         }
 
         public void InitiatePlay()
@@ -133,7 +162,7 @@ namespace TopDownGame
             }
         }
 
-        IEnumerator BackgroundScroll()
+        /*IEnumerator BackgroundScroll()
         {
             while (10 < 100)
             {
@@ -165,7 +194,7 @@ namespace TopDownGame
 
                 yield return null;
             }
-        }
+        }*/
 
         IEnumerator ButtonsDelay()
         {
