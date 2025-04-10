@@ -103,12 +103,6 @@ namespace TopDownGame {
                 MenuController.instance.TogglePause();
             }
 
-            // TEMP scene reset
-            if (Input.GetKeyDown(KeyCode.Space))
-            {
-                SceneManager.LoadScene("LevelT-2");
-            }
-
             UpdateWorldStats();
             CheckForSelectableTileMouseHover();
         }

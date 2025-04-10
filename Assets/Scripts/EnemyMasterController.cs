@@ -290,6 +290,7 @@ namespace TopDownGame
             {
                 currentHealth -= (int)(PlayerController.instance.damageOutput[PlayerController.instance.selectedCharacter] * mult);
                 animator.SetInteger("Health", currentHealth);
+                StartCoroutine(DamageFlash());
             }
             else if (TypeOfAttack == "landing")
             {
@@ -298,6 +299,7 @@ namespace TopDownGame
                     // Inflict damage from being landed on
                     currentHealth -= PlayerController.instance.damageOutput[3];
                     animator.SetInteger("Health", currentHealth);
+                    StartCoroutine(DamageFlash());
 
                     if (currentHealth <= 0)
                     {
@@ -327,7 +329,6 @@ namespace TopDownGame
             }
 
             healthDisplay.transform.localScale = new Vector3((float)currentHealth / currentHealthMax, 1, 1);
-            StartCoroutine(DamageFlash());
 
             if (currentHealth < currentHealthMax)
             {
@@ -475,7 +476,7 @@ namespace TopDownGame
                 tempBatDirections.Clear();
 
                 // Check if enemy is already overlapping player to attack
-                if (batLocation == playerPos)
+                if (new Vector2(Mathf.Round(batLocation.x), Mathf.Round(batLocation.y)) == playerPos)
                 {
                     animator.SetTrigger("DoesAttack");
 
