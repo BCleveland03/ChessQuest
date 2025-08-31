@@ -80,10 +80,14 @@ namespace TopDownGame
             }
 
             skyGrid.transform.position -= new Vector3(forestMtnSpeed * modifier, 0, 0);
-            skyBG.transform.position -= new Vector3(skySpeed * modifier, 0, 0) * Time.deltaTime;
             if (skyGrid.transform.position.x <= -48)
             {
                 skyGrid.transform.position = new Vector3(skyGrid.transform.position.x + 48f, -0.2f, 0);
+            }
+
+            skyBG.transform.position -= new Vector3(skySpeed * modifier, 0, 0); //* Time.deltaTime;
+            if (skyBG.transform.position.x <= -48)
+            {
                 skyBG.transform.position = new Vector3(skyBG.transform.position.x + 48f, -13.5f, 0);
             }
         }

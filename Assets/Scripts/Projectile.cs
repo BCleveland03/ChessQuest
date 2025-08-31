@@ -24,6 +24,7 @@ namespace TopDownGame
         public LayerMask enemyAndPlayerMask;
 
         // State Tracking
+        private Vector2 targetDestination;
         public bool belongsToPlayer;
         bool fireballSpent = false;
 
@@ -34,6 +35,9 @@ namespace TopDownGame
             proj.velocity = transform.right * projSpeed;
             //GetComponentInChildren<Transform>().eulerAngles = new Vector3(0, 0, transform.parent.rotation.z + (transform.parent.rotation.z * -1));
             spritePivot.rotation = Quaternion.Euler(0, 0, transform.rotation.z + (transform.rotation.z * -1));
+
+            // Gets target's position
+            //targetDestination = PlayerController.instance.projectileTargetTile.transform.position;
 
             // Spawn at correct layer
             spriteDisplay.GetComponent<SpriteRenderer>().sortingOrder = (int)(transform.position.y * -10 - 1);

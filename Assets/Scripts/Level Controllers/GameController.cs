@@ -71,7 +71,7 @@ namespace TopDownGame {
             isPaused = false;
 
             loadingScreen.gameObject.SetActive(true);
-            StartCoroutine(FadeAwayLoadingScreen(true));
+            StartCoroutine(FadeAwayLoadingScreen(true, false));
             StartCoroutine(StartTimer());
 
             // Check to get active scene in list
@@ -98,7 +98,7 @@ namespace TopDownGame {
             distanceFromEnd = Mathf.Round(Vector2.Distance(PlayerController.instance.transform.position, endPoint.transform.position) * 5) / 10;
 
             // Pause toggle
-            if (Input.GetKeyDown(keyPause) && MenuController.instance.pauseState != 3)
+            if (Input.GetKeyDown(keyPause) && MenuController.instance.pauseState < 3)
             {
                 MenuController.instance.TogglePause();
             }
@@ -198,7 +198,7 @@ namespace TopDownGame {
             }
         }
 
-        public void InitiateFade(bool fadeaway, bool fadeToTitle)
+        public void InitiateFade(bool fadeaway, bool fadeToTitle, bool continueToNext)
         {
             if (fadeToTitle)
             {
@@ -206,7 +206,7 @@ namespace TopDownGame {
             }
             else
             {
-                StartCoroutine(FadeAwayLoadingScreen(fadeaway));
+                StartCoroutine(FadeAwayLoadingScreen(fadeaway, continueToNext));
             }
         }
 
@@ -220,7 +220,7 @@ namespace TopDownGame {
             startedCounter = true;
         }
 
-        IEnumerator FadeAwayLoadingScreen(bool fadeaway)
+        IEnumerator FadeAwayLoadingScreen(bool fadeaway, bool continueToNext)
         {
             WaitForSeconds fadeSpeed = new WaitForSeconds(0.025f);
             
@@ -252,7 +252,14 @@ namespace TopDownGame {
 
                 // Reaching the end will advance you to the next scene, or back to the first scene in the list if there is none
                 // This system is temp; will eventually use 0 - Title, 1 - Level Select, 2-4 - prev. to next level
-                SceneManager.LoadScene(sceneList[(currentScene + 1) % sceneList.Count]);
+                if (continueToNext)
+                {
+                    SceneManager.LoadScene(sceneList[(currentScene + 1) % sceneList.Count]);
+                }
+                else
+                {
+                    SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+                }
             }
         }
 
@@ -271,6 +278,7 @@ namespace TopDownGame {
             loadingScreen.color = new Color(1, 1, 1, 1);
             loadingText.color = new Color(1, 1, 1, 1);
 
+            Time.timeScale = previousTimeScale;
             SceneManager.LoadScene("Title");
         }
     }

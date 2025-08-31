@@ -903,6 +903,8 @@ namespace TopDownGame
                     selectedCharacter = -1;
                     clearExistingTiles();
                     projectileTargetTile.SetActive(false);
+
+                    MenuController.instance.LevelFailure();
                 }
 
                 // If switching to bishop, enable her target icon

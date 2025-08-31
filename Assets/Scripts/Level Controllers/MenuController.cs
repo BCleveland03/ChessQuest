@@ -45,6 +45,9 @@ namespace TopDownGame
         [Header("Level Completion Menu")]
         public GameObject completionContainer;
 
+        [Header("Failure Container")]
+        public GameObject failContainer;
+
         // State Tracking
         bool pauseAnimationCoroutineIsActive;
         private int invertScrollCounter = 0;
@@ -62,6 +65,7 @@ namespace TopDownGame
                 pauseContainer.SetActive(false);
                 optionsContainer.SetActive(false);
                 completionContainer.SetActive(false);
+                failContainer.SetActive(false);
                 pauseAnimationCoroutineIsActive = false;
 
                 PlayerPrefs.SetString("GameState_ContinueLevel", "" + SceneManager.GetActiveScene().name);
@@ -133,25 +137,43 @@ namespace TopDownGame
 
         public void LevelCompletion()
         {
-            GameController.instance.previousTimeScale = Time.timeScale;
-            //Time.timeScale = 0;
-            AudioListener.pause = true;
+            /*GameController.instance.previousTimeScale = Time.timeScale;
+            Time.timeScale = 0;*/
+            //AudioListener.pause = true;
             pauseState = 3;
             StartCoroutine(ShowMenu());
 
             GameController.instance.isPaused = true;
         }
 
+        public void LevelFailure()
+        {
+            /*GameController.instance.previousTimeScale = Time.timeScale;
+            Time.timeScale = 0;*/
+            //AudioListener.pause = true;
+            GameController.instance.levelEnded = true;
+            pauseState = 4;
+            StartCoroutine(ShowMenu());
+        }
+
         public void ContinueToNextLevel()
         {
+            //Time.timeScale = GameController.instance.previousTimeScale;
             print("Insert transition out of level.");
-            GameController.instance.InitiateFade(false, false);
+            GameController.instance.InitiateFade(false, false, true);
             PlayerPrefs.SetInt("LevelStat_SelectedCharacter", PlayerController.instance.selectedCharacter);
+        }
+
+        public void RestartLevel()
+        {
+            //Time.timeScale = GameController.instance.previousTimeScale;
+            print("Restarting level / scene.");
+            GameController.instance.InitiateFade(false, false, false);
         }
 
         public void ReturnToTitle()
         {
-            Time.timeScale = GameController.instance.previousTimeScale;
+            //Time.timeScale = GameController.instance.previousTimeScale;
             AudioListener.pause = false;
 
             // Fix this; needs to save the next scene in list for continue
@@ -175,7 +197,7 @@ namespace TopDownGame
             //print("" + SceneManager.GetActiveScene());
 
             pauseState = -1;
-            GameController.instance.InitiateFade(false, true);
+            GameController.instance.InitiateFade(false, true, true);
         }
 
         public void SaveSettingPrefs()
@@ -259,7 +281,7 @@ namespace TopDownGame
         {
             // Returns size to default
             RectTransform pausePanelTransform = menuPanel.GetComponent<RectTransform>();
-            if (pauseState == 1)
+            if (pauseState == 1 || pauseState == 4)
             {
                 pausePanelTransform.sizeDelta = new Vector2(410, 490);
             }
@@ -294,6 +316,10 @@ namespace TopDownGame
             else if (pauseState == 3)
             {
                 completionContainer.SetActive(true);
+            }
+            else if (pauseState == 4)
+            {
+                failContainer.SetActive(true);
             }
 
             // Declares coroutine conclusion

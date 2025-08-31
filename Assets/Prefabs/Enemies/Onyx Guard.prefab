@@ -196,7 +196,7 @@ MonoBehaviour:
   starSwirl: {fileID: 7788881304870808375}
   enemyTypeID: 0
   currentHealth: 0
-  currentHealthMax: 50
+  currentHealthMax: 60
   enemyDamage: 15
   enemyDetectionRadius: 3
   travelDirection: 0
@@ -433,7 +433,7 @@ SpriteRenderer:
   m_Size: {x: 2, y: 2}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
-  m_WasSpriteAssigned: 1
+  m_WasSpriteAssigned: 0
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
 --- !u!95 &1520554770867331510
